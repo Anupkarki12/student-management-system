@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.4.0",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "eslint-config-react-app": "^7.0.1",
+    "force": "^0.0.3",
+    "react-countup": "^6.5.3",
+    "react-router-dom": "^7.0.2",
+    "react-scripts": "^3.0.1",
+    "recharts": "^2.14.1",
+    "redux": "^5.0.1",
+    "styled-components": "^6.1.13"
+  }
+}
