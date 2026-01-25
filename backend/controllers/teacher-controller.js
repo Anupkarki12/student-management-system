@@ -48,6 +48,29 @@ const teacherLogIn = async (req, res) => {
     }
 };
 
+const teacherForgotPassword = async (req, res) => {
+    try {
+        const { email, newPassword } = req.body;
+        if (!email || !newPassword) {
+            return res.send({ message: "Email and new password are required" });
+        }
+
+        const teacher = await Teacher.findOne({ email });
+        if (!teacher) {
+            return res.send({ message: "Teacher not found" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPass = await bcrypt.hash(newPassword, salt);
+
+        await Teacher.findByIdAndUpdate(teacher._id, { password: hashedPass });
+        teacher.password = undefined;
+        res.send({ message: "Password updated successfully", teacher });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+};
+
 const getTeachers = async (req, res) => {
     try {
         let teachers = await Teacher.find({ school: req.params.id })
@@ -195,6 +218,7 @@ const teacherAttendance = async (req, res) => {
 module.exports = {
     teacherRegister,
     teacherLogIn,
+    teacherForgotPassword,
     getTeachers,
     getTeacherDetail,
     updateTeacherSubject,

@@ -32,6 +32,10 @@ const teacherSchema = new mongoose.Schema({
         ref: 'sclass',
         required: true,
     },
+    photo: {
+        type: String,
+        default: ""
+    },
     attendance: [{
         date: {
             type: Date,

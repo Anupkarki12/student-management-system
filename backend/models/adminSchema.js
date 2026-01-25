@@ -22,6 +22,10 @@ const adminSchema = new mongoose.Schema({
         type: String,
         unique: true,
         required: true
+    },
+    photo: {
+        type: String,
+        default: ""
     }
 });
 

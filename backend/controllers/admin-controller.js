@@ -84,7 +84,8 @@ const adminLogIn = async (req, res) => {
     if (req.body.email && req.body.password) {
         let admin = await Admin.findOne({ email: req.body.email });
         if (admin) {
-            if (req.body.password === admin.password) {
+            const validated = await bcrypt.compare(req.body.password, admin.password);
+            if (validated) {
                 admin.password = undefined;
                 res.send(admin);
             } else {
@@ -95,6 +96,29 @@ const adminLogIn = async (req, res) => {
         }
     } else {
         res.send({ message: "Email and password are required" });
+    }
+};
+
+const adminForgotPassword = async (req, res) => {
+    try {
+        const { email, newPassword } = req.body;
+        if (!email || !newPassword) {
+            return res.send({ message: "Email and new password are required" });
+        }
+
+        const admin = await Admin.findOne({ email });
+        if (!admin) {
+            return res.send({ message: "User not found" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPass = await bcrypt.hash(newPassword, salt);
+
+        await Admin.findByIdAndUpdate(admin._id, { password: hashedPass });
+        admin.password = undefined;
+        res.send({ message: "Password updated successfully", admin });
+    } catch (err) {
+        res.status(500).json(err);
     }
 };
 
@@ -149,4 +173,4 @@ const getAdminDetail = async (req, res) => {
 
 // module.exports = { adminRegister, adminLogIn, getAdminDetail, deleteAdmin, updateAdmin };
 
-module.exports = { adminRegister, adminLogIn, getAdminDetail };
+module.exports = { adminRegister, adminLogIn, getAdminDetail, adminForgotPassword };

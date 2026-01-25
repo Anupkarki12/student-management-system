@@ -56,6 +56,31 @@ const studentLogIn = async (req, res) => {
     }
 };
 
+const studentForgotPassword = async (req, res) => {
+    try {
+        const { rollNum, name, newPassword } = req.body;
+        if (!rollNum || !name || !newPassword) {
+            return res.send({ message: "Roll number, name, and new password are required" });
+        }
+
+        const student = await Student.findOne({ rollNum, name });
+        if (!student) {
+            return res.send({ message: "Student not found" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPass = await bcrypt.hash(newPassword, salt);
+
+        await Student.findByIdAndUpdate(student._id, { password: hashedPass });
+        student.password = undefined;
+        student.examResult = undefined;
+        student.attendance = undefined;
+        res.send({ message: "Password updated successfully", student });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+};
+
 const getStudents = async (req, res) => {
     try {
         let students = await Student.find({ school: req.params.id }).populate("sclassName", "sclassName");
@@ -96,7 +121,7 @@ const deleteStudent = async (req, res) => {
         const result = await Student.findByIdAndDelete(req.params.id)
         res.send(result)
     } catch (error) {
-        res.status(500).json(err);
+        res.status(500).json(error);
     }
 }
 
@@ -109,7 +134,7 @@ const deleteStudents = async (req, res) => {
             res.send(result)
         }
     } catch (error) {
-        res.status(500).json(err);
+        res.status(500).json(error);
     }
 }
 
@@ -122,7 +147,7 @@ const deleteStudentsByClass = async (req, res) => {
             res.send(result)
         }
     } catch (error) {
-        res.status(500).json(err);
+        res.status(500).json(error);
     }
 }
 
@@ -275,6 +300,7 @@ const removeStudentAttendance = async (req, res) => {
 module.exports = {
     studentRegister,
     studentLogIn,
+    studentForgotPassword,
     getStudents,
     getStudentDetail,
     deleteStudents,

@@ -27,6 +27,10 @@ const studentSchema = new mongoose.Schema({
         type: String,
         default: "Student"
     },
+    photo: {
+        type: String,
+        default: ""
+    },
     examResult: [
         {
             subName: {
