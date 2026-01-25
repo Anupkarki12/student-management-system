@@ -28,8 +28,14 @@ const ShowNotices = () => {
     }
 
     const deleteHandler = (deleteID, address) => {
+        // Reset response state before delete to avoid showing "No records" message
+        dispatch({ type: 'notice/getFailed', payload: null });
+        
         dispatch(deleteUser(deleteID, address))
             .then(() => {
+                // Clear the noticesList temporarily to force re-fetch
+                dispatch({ type: 'notice/getSuccess', payload: [] });
+                // Then fetch fresh data
                 dispatch(getAllNotices(currentUser._id, "Notice"));
             })
     }

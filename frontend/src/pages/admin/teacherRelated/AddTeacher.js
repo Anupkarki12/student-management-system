@@ -5,7 +5,8 @@ import { getSubjectDetails } from '../../../redux/sclassRelated/sclassHandle';
 import Popup from '../../../components/Popup';
 import { registerUser } from '../../../redux/userRelated/userHandle';
 import { underControl } from '../../../redux/userRelated/userSlice';
-import { CircularProgress } from '@mui/material';
+import { CircularProgress, Box, Typography, Button } from '@mui/material';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 const AddTeacher = () => {
   const params = useParams()
@@ -24,6 +25,8 @@ const AddTeacher = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('')
+  const [photo, setPhoto] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState(null)
 
   const [showPopup, setShowPopup] = useState(false);
   const [message, setMessage] = useState("");
@@ -34,7 +37,26 @@ const AddTeacher = () => {
   const teachSubject = subjectDetails && subjectDetails._id
   const teachSclass = subjectDetails && subjectDetails.sclassName && subjectDetails.sclassName._id
 
-  const fields = { name, email, password, role, school, teachSubject, teachSclass }
+  const handlePhotoChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setPhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setPhoto(null);
+    setPhotoPreview(null);
+  };
+
+  const fields = photo 
+    ? { name, email, password, role, school, teachSubject, teachSclass, photo }
+    : { name, email, password, role, school, teachSubject, teachSclass };
 
   const submitHandler = (event) => {
     event.preventDefault()
@@ -89,6 +111,71 @@ const AddTeacher = () => {
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="new-password" required />
 
+          {/* Photo Upload Section */}
+          <label>Teacher Photo (Optional)</label>
+          <Box sx={{ mb: 2 }}>
+            {!photoPreview ? (
+              <Box
+                sx={{
+                  border: '2px dashed #ccc',
+                  borderRadius: 1,
+                  p: 3,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    backgroundColor: '#f5f5f5'
+                  }
+                }}
+                onClick={() => document.getElementById('teacher-photo-upload').click()}
+              >
+                <CloudUploadIcon sx={{ fontSize: 48, color: '#ccc', mb: 1 }} />
+                <Typography variant="body2" color="textSecondary">
+                  Click to upload photo
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  (JPG, PNG, GIF - Max 5MB)
+                </Typography>
+              </Box>
+            ) : (
+              <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                <img 
+                  src={photoPreview} 
+                  alt="Teacher preview" 
+                  style={{ 
+                    width: 150, 
+                    height: 150, 
+                    objectFit: 'cover',
+                    borderRadius: 8,
+                    border: '2px solid #ddd'
+                  }} 
+                />
+                <Button
+                  variant="contained"
+                  color="error"
+                  size="small"
+                  onClick={removePhoto}
+                  sx={{ 
+                    position: 'absolute',
+                    top: -10,
+                    right: -10,
+                    minWidth: 'auto',
+                    p: 0.5
+                  }}
+                >
+                  ×
+                </Button>
+              </Box>
+            )}
+            <input
+              id="teacher-photo-upload"
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              style={{ display: 'none' }}
+            />
+          </Box>
+
           <button className="registerButton" type="submit" disabled={loader}>
             {loader ? (
               <CircularProgress size={24} color="inherit" />
@@ -104,3 +191,4 @@ const AddTeacher = () => {
 }
 
 export default AddTeacher
+

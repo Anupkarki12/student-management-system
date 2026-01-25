@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getUserDetails, updateUser } from '../../../redux/userRelated/userHandle';
+import { getUserDetails } from '../../../redux/userRelated/userHandle';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getSubjectList } from '../../../redux/sclassRelated/sclassHandle';
-import { Box, Button, Tab, Container } from '@mui/material';
+import { Box, Button, Tab, Container, Typography } from '@mui/material';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import TabPanel from '@mui/lab/TabPanel';
-import Popup from '../../../components/Popup';
 import CustomPieChart from '../../../components/CustomPieChart';
 
 function ViewStudent() {
@@ -28,8 +26,6 @@ function ViewStudent() {
     const [sclassName, setSclassName] = useState('');
     const [studentSchool, setStudentSchool] = useState('');
     const [subjectAttendance, setSubjectAttendance] = useState([]);
-    const [message, setMessage] = useState("");
-    const [showPopup, setShowPopup] = useState(false);
 
     // Fetch student details
     useEffect(() => {
@@ -52,6 +48,10 @@ function ViewStudent() {
         setValue(newValue);
     };
 
+    const handleViewFee = () => {
+        navigate(`/Admin/students/student/fee/${studentID}`);
+    };
+
     return (
         <>
             {loading ? (
@@ -66,6 +66,7 @@ function ViewStudent() {
                                 <Tab label="Details" value="1" />
                                 <Tab label="Attendance" value="2" />
                                 <Tab label="Marks" value="3" />
+                                <Tab label="Fee" value="4" />
                             </TabList>
                         </Box>
                         <Container sx={{ marginTop: "2rem" }}>
@@ -99,13 +100,30 @@ function ViewStudent() {
                                 <h3>Marks Section</h3>
                                 <p>Marks data will go here.</p>
                             </TabPanel>
+                            <TabPanel value="4">
+                                <Box sx={{ textAlign: 'center', py: 4 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                        Fee Management
+                                    </Typography>
+                                    <Typography variant="body1" color="textSecondary" paragraph>
+                                        View and manage student fee details
+                                    </Typography>
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={handleViewFee}
+                                    >
+                                        View Fee Details
+                                    </Button>
+                                </Box>
+                            </TabPanel>
                         </Container>
                     </TabContext>
                 </Box>
             )}
-            <Popup message={message} setShowPopup={setShowPopup} showPopup={showPopup} />
         </>
     );
 }
 
 export { ViewStudent };
+

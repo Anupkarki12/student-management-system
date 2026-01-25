@@ -1,25 +1,72 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import * as React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { getClassStudents } from "../../redux/sclassRelated/sclassHandle";
-import { Paper, Box, Typography, ButtonGroup, Button, Popper, Grow, ClickAwayListener, MenuList, MenuItem } from '@mui/material';
+import { Paper, Box, Typography, ButtonGroup, Button, Popper, Grow, ClickAwayListener, MenuList, MenuItem, Alert, Grid, Card, CardContent } from '@mui/material';
 import { BlackButton, BlueButton} from "../../components/buttonStyles";
 import TableTemplate from "../../components/TableTemplate";
 import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
+import axios from 'axios';
+import ClassIcon from '@mui/icons-material/Class';
 
 const TeacherClassDetails = () => {
     const navigate = useNavigate()
     const dispatch = useDispatch();
-    const { sclassStudents, loading, error, getresponse } = useSelector((state) => state.sclass);
+    const params = useParams();
+    const classID = params.id;
 
+    const { sclassStudents, loading, error, getresponse } = useSelector((state) => state.sclass);
     const { currentUser } = useSelector((state) => state.user);
-    const classID = currentUser.teachSclass?._id
-    const subjectID = currentUser.teachSubject?._id
+    
+    const [teacherClasses, setTeacherClasses] = useState([]);
+    const [selectedClassId, setSelectedClassId] = useState(classID || '');
+    const [classSubjects, setClassSubjects] = useState([]);
+    const [message, setMessage] = useState({ type: '', text: '' });
+
+    const teacherId = currentUser?._id;
 
     useEffect(() => {
-        dispatch(getClassStudents(classID));
-    }, [dispatch, classID])
+        fetchTeacherClasses();
+    }, [teacherId]);
+
+    useEffect(() => {
+        if (selectedClassId) {
+            dispatch(getClassStudents(selectedClassId));
+            fetchClassSubjects();
+        }
+    }, [dispatch, selectedClassId]);
+
+    const fetchTeacherClasses = async () => {
+        try {
+            const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Teacher/Classes/${teacherId}`);
+            if (Array.isArray(result.data) && result.data.length > 0) {
+                setTeacherClasses(result.data);
+                // If no class selected and we have classes, select the first one
+                if (!selectedClassId && !classID) {
+                    setSelectedClassId(result.data[0]._id);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching teacher classes:', error);
+        }
+    };
+
+    const fetchClassSubjects = async () => {
+        try {
+            const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Teacher/Subjects/${teacherId}/${selectedClassId}`);
+            if (Array.isArray(result.data)) {
+                setClassSubjects(result.data);
+            }
+        } catch (error) {
+            console.error('Error fetching subjects:', error);
+        }
+    };
+
+    const handleClassChange = (newClassId) => {
+        setSelectedClassId(newClassId);
+        navigate(`/Teacher/class/${newClassId}`);
+    };
 
     if (error) {
         console.log(error)
@@ -30,7 +77,7 @@ const TeacherClassDetails = () => {
         { id: 'rollNum', label: 'Roll Number', minWidth: 100 },
     ]
 
-    const studentRows = sclassStudents.map((student) => {
+    const studentRows = sclassStudents && sclassStudents.map((student) => {
         return {
             name: student.name,
             rollNum: student.rollNum,
@@ -55,10 +102,11 @@ const TeacherClassDetails = () => {
         };
 
         const handleAttendance = () => {
-            navigate(`/Teacher/class/student/attendance/${row.id}/${subjectID}`)
+            // Navigate to attendance page with class ID
+            navigate(`/Teacher/attendance?classId=${selectedClassId}`)
         }
         const handleMarks = () => {
-            navigate(`/Teacher/class/student/marks/${row.id}/${subjectID}`)
+            navigate(`/Teacher/marks?classId=${selectedClassId}`)
         };
 
         const handleMenuItemClick = (event, index) => {
@@ -74,9 +122,12 @@ const TeacherClassDetails = () => {
             if (anchorRef.current && anchorRef.current.contains(event.target)) {
                 return;
             }
-
             setOpen(false);
         };
+        
+        const selectedClass = teacherClasses.find(c => c._id === selectedClassId);
+        const subjectID = classSubjects[0]?._id || '';
+
         return (
             <>
                 <BlueButton
@@ -102,9 +153,7 @@ const TeacherClassDetails = () => {
                         </BlackButton>
                     </ButtonGroup>
                     <Popper
-                        sx={{
-                            zIndex: 1,
-                        }}
+                        sx={{ zIndex: 1 }}
                         open={open}
                         anchorEl={anchorRef.current}
                         role={undefined}
@@ -125,7 +174,6 @@ const TeacherClassDetails = () => {
                                             {options.map((option, index) => (
                                                 <MenuItem
                                                     key={option}
-                                                    disabled={index === 2}
                                                     selected={index === selectedIndex}
                                                     onClick={(event) => handleMenuItemClick(event, index)}
                                                 >
@@ -145,29 +193,64 @@ const TeacherClassDetails = () => {
 
     return (
         <>
-            {loading ? (
+            {loading && teacherClasses.length === 0 ? (
                 <div>Loading...</div>
             ) : (
                 <>
                     <Typography variant="h4" align="center" gutterBottom>
                         Class Details
                     </Typography>
-                    {getresponse ? (
+
+                    {/* Class Selection */}
+                    {teacherClasses.length > 0 && (
+                        <Box sx={{ mb: 3 }}>
+                            <Typography variant="h6" gutterBottom>Select Class:</Typography>
+                            <Grid container spacing={2}>
+                                {teacherClasses.map((cls) => (
+                                    <Grid item xs={12} sm={6} md={4} key={cls._id}>
+                                        <Card 
+                                            sx={{ 
+                                                cursor: 'pointer',
+                                                bgcolor: selectedClassId === cls._id ? 'primary.main' : 'inherit',
+                                                color: selectedClassId === cls._id ? 'white' : 'inherit',
+                                                '&:hover': { bgcolor: selectedClassId === cls._id ? 'primary.dark' : 'action.hover' }
+                                            }}
+                                            onClick={() => handleClassChange(cls._id)}
+                                        >
+                                            <CardContent>
+                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                    <ClassIcon sx={{ mr: 1 }} />
+                                                    <Typography variant="h6">Class {cls.sclassName}</Typography>
+                                                </Box>
+                                                <Typography variant="body2" sx={{ mt: 1 }}>
+                                                    {cls.subjects?.length || 0} subjects
+                                                </Typography>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        </Box>
+                    )}
+
+                    {selectedClassId && (
                         <>
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                                No Students Found
-                            </Box>
-                        </>
-                    ) : (
-                        <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-                            <Typography variant="h5" gutterBottom>
+                            <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
                                 Students List:
                             </Typography>
 
-                            {Array.isArray(sclassStudents) && sclassStudents.length > 0 &&
-                                <TableTemplate buttonHaver={StudentsButtonHaver} columns={studentColumns} rows={studentRows} />
-                            }
-                        </Paper>
+                            {getresponse ? (
+                                <Paper sx={{ p: 3, textAlign: 'center', bgcolor: '#f9f9f9' }}>
+                                    <Typography color="textSecondary">No students found in this class</Typography>
+                                </Paper>
+                            ) : (
+                                <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+                                    {Array.isArray(sclassStudents) && sclassStudents.length > 0 &&
+                                        <TableTemplate buttonHaver={StudentsButtonHaver} columns={studentColumns} rows={studentRows} />
+                                    }
+                                </Paper>
+                            )}
+                        </>
                     )}
                 </>
             )}

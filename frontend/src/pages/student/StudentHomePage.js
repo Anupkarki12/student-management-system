@@ -19,12 +19,14 @@ const StudentHomePage = () => {
 
     const [subjectAttendance, setSubjectAttendance] = useState([]);
 
-    const classID = currentUser.sclassName._id
+    const classID = currentUser?.sclassName?._id
 
     useEffect(() => {
-        dispatch(getUserDetails(currentUser._id, "Student"));
-        dispatch(getSubjectList(classID, "ClassSubjects"));
-    }, [dispatch, currentUser._id, classID]);
+        if (currentUser?._id && classID) {
+            dispatch(getUserDetails(currentUser._id, "Student"));
+            dispatch(getSubjectList(classID, "ClassSubjects"));
+        }
+    }, [dispatch, currentUser?._id, classID]);
 
     const numberOfSubjects = subjectsList && subjectsList.length;
 

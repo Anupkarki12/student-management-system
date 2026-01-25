@@ -28,8 +28,10 @@ const ViewStdAttendance = () => {
     const { userDetails, currentUser, loading, response, error } = useSelector((state) => state.user);
 
     useEffect(() => {
-        dispatch(getUserDetails(currentUser._id, "Student"));
-    }, [dispatch, currentUser._id]);
+        if (currentUser?._id) {
+            dispatch(getUserDetails(currentUser._id, "Student"));
+        }
+    }, [dispatch, currentUser?._id]);
 
     if (response) { console.log(response) }
     else if (error) { console.log(error) }
@@ -70,8 +72,7 @@ const ViewStdAttendance = () => {
                 <Table>
                     <TableHead>
                         <StyledTableRow>
-                            <StyledTableCell>Subject</StyledTableCell>
-                            <StyledTableCell>Present</StyledTableCell>
+                             <StyledTableCell>Present</StyledTableCell>
                             <StyledTableCell>Total Sessions</StyledTableCell>
                             <StyledTableCell>Attendance Percentage</StyledTableCell>
                             <StyledTableCell align="center">Actions</StyledTableCell>
@@ -83,8 +84,7 @@ const ViewStdAttendance = () => {
                         return (
                             <TableBody key={index}>
                                 <StyledTableRow>
-                                    <StyledTableCell>{subName}</StyledTableCell>
-                                    <StyledTableCell>{present}</StyledTableCell>
+                                     <StyledTableCell>{present}</StyledTableCell>
                                     <StyledTableCell>{sessions}</StyledTableCell>
                                     <StyledTableCell>{subjectAttendancePercentage}%</StyledTableCell>
                                     <StyledTableCell align="center">

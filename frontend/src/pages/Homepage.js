@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Button } from '@mui/material';
+import { Box } from '@mui/material';
 import styled, { keyframes } from 'styled-components';
 import { LightPurpleButton } from '../components/buttonStyles';
-import AryanSchool from "../assets/aryan.jpg"; // school image as background
+import AryanSchool from "../assets/aryan.jpg";
 
 const Homepage = () => {
     return (
@@ -29,19 +29,6 @@ const Homepage = () => {
                             Login
                         </LightPurpleButton>
                     </StyledLink>
-
-                    <StyledLinkExternal
-                        href="https://thearyanschool.edu.np/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        <GuestButton
-                            variant="outlined"
-                            fullWidth
-                        >
-                            Login as Guest
-                        </GuestButton>
-                    </StyledLinkExternal>
 
                     <StyledText>
                         Don&apos;t have an account?{' '}
@@ -142,19 +129,4 @@ const StyledBox = styled(Box)`
 const StyledLink = styled(Link)`
   text-decoration: none;
   width: 100%;
-`;
-
-const StyledLinkExternal = styled.a`
-  text-decoration: none;
-  width: 100%;
-`;
-
-const GuestButton = styled(Button)`
-  border-color: #7f56da !important;
-  color: #7f56da !important;
-  transition: all 0.3s !important;
-  &:hover {
-    background: rgba(127, 86, 218, 0.1) !important;
-    box-shadow: 0 5px 15px rgba(127,86,218,0.2) !important;
-  }
 `;

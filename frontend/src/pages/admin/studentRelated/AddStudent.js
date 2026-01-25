@@ -5,7 +5,8 @@ import { registerUser } from '../../../redux/userRelated/userHandle';
 import Popup from '../../../components/Popup';
 import { underControl } from '../../../redux/userRelated/userSlice';
 import { getAllSclasses } from '../../../redux/sclassRelated/sclassHandle';
-import { CircularProgress } from '@mui/material';
+import { CircularProgress, Box, Typography, Button } from '@mui/material';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 const AddStudent = ({ situation }) => {
     const dispatch = useDispatch()
@@ -21,6 +22,8 @@ const AddStudent = ({ situation }) => {
     const [password, setPassword] = useState('')
     const [className, setClassName] = useState('')
     const [sclassName, setSclassName] = useState('')
+    const [photo, setPhoto] = useState(null)
+    const [photoPreview, setPhotoPreview] = useState(null)
 
     const adminID = currentUser._id
     const role = "Student"
@@ -53,7 +56,26 @@ const AddStudent = ({ situation }) => {
         }
     }
 
-    const fields = { name, rollNum, password, sclassName, adminID, role, attendance }
+    const handlePhotoChange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            setPhoto(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPhotoPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removePhoto = () => {
+        setPhoto(null);
+        setPhotoPreview(null);
+    };
+
+    const fields = photo 
+        ? { name, rollNum, password, sclassName, adminID, role, attendance, photo }
+        : { name, rollNum, password, sclassName, adminID, role, attendance };
 
     const submitHandler = (event) => {
         event.preventDefault()
@@ -70,7 +92,13 @@ const AddStudent = ({ situation }) => {
     useEffect(() => {
         if (status === 'added') {
             dispatch(underControl())
-            navigate(-1)
+            setMessage("Student added successfully!")
+            setShowPopup(true)
+            setLoader(false)
+            // Navigate back after a short delay to show the success message
+            setTimeout(() => {
+                navigate(-1)
+            }, 1500)
         }
         else if (status === 'failed') {
             setMessage(response)
@@ -125,6 +153,71 @@ const AddStudent = ({ situation }) => {
                         onChange={(event) => setPassword(event.target.value)}
                         autoComplete="new-password" required />
 
+                    {/* Photo Upload Section */}
+                    <label>Student Photo (Optional)</label>
+                    <Box sx={{ mb: 2 }}>
+                        {!photoPreview ? (
+                            <Box
+                                sx={{
+                                    border: '2px dashed #ccc',
+                                    borderRadius: 1,
+                                    p: 3,
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                        borderColor: 'primary.main',
+                                        backgroundColor: '#f5f5f5'
+                                    }
+                                }}
+                                onClick={() => document.getElementById('photo-upload').click()}
+                            >
+                                <CloudUploadIcon sx={{ fontSize: 48, color: '#ccc', mb: 1 }} />
+                                <Typography variant="body2" color="textSecondary">
+                                    Click to upload photo
+                                </Typography>
+                                <Typography variant="caption" color="textSecondary">
+                                    (JPG, PNG, GIF - Max 5MB)
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                                <img 
+                                    src={photoPreview} 
+                                    alt="Student preview" 
+                                    style={{ 
+                                        width: 150, 
+                                        height: 150, 
+                                        objectFit: 'cover',
+                                        borderRadius: 8,
+                                        border: '2px solid #ddd'
+                                    }} 
+                                />
+                                <Button
+                                    variant="contained"
+                                    color="error"
+                                    size="small"
+                                    onClick={removePhoto}
+                                    sx={{ 
+                                        position: 'absolute',
+                                        top: -10,
+                                        right: -10,
+                                        minWidth: 'auto',
+                                        p: 0.5
+                                    }}
+                                >
+                                    ×
+                                </Button>
+                            </Box>
+                        )}
+                        <input
+                            id="photo-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoChange}
+                            style={{ display: 'none' }}
+                        />
+                    </Box>
+
                     <button className="registerButton" type="submit" disabled={loader}>
                         {loader ? (
                             <CircularProgress size={24} color="inherit" />
@@ -139,4 +232,5 @@ const AddStudent = ({ situation }) => {
     )
 }
 
-export default AddStudent
+export default AddStudent;
+

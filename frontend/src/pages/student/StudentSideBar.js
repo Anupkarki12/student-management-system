@@ -8,6 +8,9 @@ import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined
 import AnnouncementOutlinedIcon from '@mui/icons-material/AnnouncementOutlined';
 import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import PaymentIcon from '@mui/icons-material/Payment';
+import DescriptionIcon from '@mui/icons-material/Description';
+import HomeworkIcon from '@mui/icons-material/HomeWork';
 
 const StudentSideBar = () => {
     const location = useLocation();
@@ -16,7 +19,7 @@ const StudentSideBar = () => {
             <React.Fragment>
                 <ListItemButton component={Link} to="/">
                     <ListItemIcon>
-                        <HomeIcon color={location.pathname === ("/" || "/Student/dashboard") ? 'primary' : 'inherit'} />
+                        <HomeIcon color={location.pathname === "/" || location.pathname === "/Student/dashboard" ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Home" />
                 </ListItemButton>
@@ -31,6 +34,24 @@ const StudentSideBar = () => {
                         <ClassOutlinedIcon color={location.pathname.startsWith("/Student/attendance") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Attendance" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Student/homework">
+                    <ListItemIcon>
+                        <HomeworkIcon color={location.pathname.startsWith("/Student/homework") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Homework" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Student/documents">
+                    <ListItemIcon>
+                        <DescriptionIcon color={location.pathname.startsWith("/Student/documents") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Documents" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Student/fee">
+                    <ListItemIcon>
+                        <PaymentIcon color={location.pathname.startsWith("/Student/fee") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="My Fee" />
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Student/complain">
                     <ListItemIcon>

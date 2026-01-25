@@ -35,6 +35,24 @@ export const registerUser = (fields, role) => async (dispatch) => {
     dispatch(authRequest());
 
     try {
+        // Check if there's a photo file in the fields
+        if (fields.photo) {
+            // Upload photo first
+            const photoFormData = new FormData();
+            photoFormData.append('photo', fields.photo);
+            
+            const photoResult = await axios.post(
+                `${process.env.REACT_APP_BASE_URL}/ProfilePhotoUpload`,
+                photoFormData,
+                {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                }
+            );
+            
+            // Add photo path to fields and remove the file object
+            fields = { ...fields, photo: photoResult.data.photo };
+        }
+        
         const result = await axios.post(`${process.env.REACT_APP_BASE_URL}/${role}Reg`, fields, {
             headers: { 'Content-Type': 'application/json' },
         });
@@ -44,8 +62,15 @@ export const registerUser = (fields, role) => async (dispatch) => {
         else if (result.data.school) {
             dispatch(stuffAdded());
         }
-        else {
+        else if (result.data.message) {
             dispatch(authFailed(result.data.message));
+        }
+        else if (result.data.rollNum || result.data._id) {
+            // Student registration successful - no message field, just return the student object
+            dispatch(stuffAdded());
+        }
+        else {
+            dispatch(authFailed("Unknown error occurred"));
         }
     } catch (error) {
         dispatch(authError(error));
@@ -124,4 +149,34 @@ export const addStuff = (fields, address) => async (dispatch) => {
     } catch (error) {
         dispatch(authError(error));
     }
+}
+
+// Upload profile photo
+export const uploadProfilePhoto = (photo) => async (dispatch) => {
+    dispatch(authRequest());
+
+    try {
+        const formData = new FormData();
+        formData.append('photo', photo);
+
+        const result = await axios.post(
+            `${process.env.REACT_APP_BASE_URL}/ProfilePhotoUpload`,
+            formData,
+            {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            }
+        );
+
+        if (result.data.photo) {
+            dispatch(authSuccess({ ...result.data, photo: result.data.photo }));
+            return result.data.photo;
+        } else {
+            dispatch(authFailed(result.data.message));
+            return null;
+        }
+    } catch (error) {
+        dispatch(authError(error));
+        return null;
+    }
 };
+

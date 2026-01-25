@@ -37,12 +37,14 @@ const ShowClasses = () => {
   const [message, setMessage] = useState("");
 
   const deleteHandler = (deleteID, address) => {
-    // console.log(deleteID);
-    // console.log(address);
-    // setMessage("Sorry the delete function has been disabled for now.")
-    // setShowPopup(true)
+    // Reset response state before delete to avoid showing "No records" message
+    dispatch({ type: 'sclass/getFailedTwo', payload: null });
+    
     dispatch(deleteUser(deleteID, address))
       .then(() => {
+        // Clear the sclassesList temporarily to force re-fetch
+        dispatch({ type: 'sclass/getSuccess', payload: [] });
+        // Then fetch fresh data
         dispatch(getAllSclasses(adminID, "Sclass"));
       })
   }

@@ -23,6 +23,12 @@ import TeacherHomePage from './TeacherHomePage';
 import TeacherProfile from './TeacherProfile';
 import TeacherViewStudent from './TeacherViewStudent';
 import StudentExamMarks from '../admin/studentRelated/StudentExamMarks';
+import AddDocument from './documentRelated/AddDocument';
+import ShowDocuments from './documentRelated/ShowDocuments';
+import TakeAttendance from './TakeAttendance';
+import Homework from './Homework';
+import TeacherNotes from './TeacherNotes';
+import TeacherMarks from './TeacherMarks';
 
 const TeacherDashboard = () => {
     const [open, setOpen] = useState(true);
@@ -60,7 +66,7 @@ const TeacherDashboard = () => {
                         <AccountMenu />
                     </Toolbar>
                 </AppBar>
-                <Drawer variant="permanent" open={open} sx={open ? styles.drawerStyled : styles.hideDrawer}>
+                <Drawer variant="permanent" open={open} sx={styles.drawerStyled}>
                     <Toolbar sx={styles.toolBarStyled}>
                         <IconButton onClick={toggleDrawer}>
                             <ChevronLeftIcon />
@@ -78,10 +84,16 @@ const TeacherDashboard = () => {
                         <Route path='*' element={<Navigate to="/" />} />
                         <Route path="/Teacher/dashboard" element={<TeacherHomePage />} />
                         <Route path="/Teacher/profile" element={<TeacherProfile />} />
-
+                        <Route path="/Teacher/documents" element={<ShowDocuments />} />
+                        <Route path="/Teacher/adddocument" element={<AddDocument />} />
                         <Route path="/Teacher/complain" element={<TeacherComplain />} />
+                        <Route path="/Teacher/attendance" element={<TakeAttendance />} />
+                        <Route path="/Teacher/homework" element={<Homework />} />
+                        <Route path="/Teacher/notes" element={<TeacherNotes />} />
+                        <Route path="/Teacher/marks" element={<TeacherMarks />} />
 
                         <Route path="/Teacher/class" element={<TeacherClassDetails />} />
+                        <Route path="/Teacher/class/:id" element={<TeacherClassDetails />} />
                         <Route path="/Teacher/class/student/:id" element={<TeacherViewStudent />} />
 
                         <Route path="/Teacher/class/student/attendance/:studentID/:subjectID" element={<StudentAttendance situation="Subject" />} />
@@ -115,11 +127,5 @@ const styles = {
     },
     drawerStyled: {
         display: "flex"
-    },
-    hideDrawer: {
-        display: 'flex',
-        '@media (max-width: 600px)': {
-            display: 'none',
-        },
     },
 }

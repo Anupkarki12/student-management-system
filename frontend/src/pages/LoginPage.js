@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     Button, Grid, Box, Typography, Paper, Checkbox, FormControlLabel, TextField,
-    CssBaseline, IconButton, InputAdornment, CircularProgress, Backdrop
+    CssBaseline, IconButton, InputAdornment, CircularProgress
 } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
@@ -67,11 +67,6 @@ const LoginPage = ({ role }) => {
         if (name === 'password') setPasswordError(false);
         if (name === 'rollNumber') setRollNumberError(false);
         if (name === 'studentName') setStudentNameError(false);
-    };
-
-    // Redirect to external website on "Login as Guest"
-    const guestModeHandler = () => {
-        window.location.href = "https://thearyanschool.edu.np/";
     };
 
     useEffect(() => {
@@ -173,19 +168,11 @@ const LoginPage = ({ role }) => {
                             />
                             <Grid container sx={{ display: "flex", justifyContent: "space-between" }}>
                                 <FormControlLabel control={<Checkbox value="remember" color="primary" />} label="Remember me" />
-                                <StyledLink href="#">Forgot password?</StyledLink>
+                                <StyledLink to={`/${role}ForgotPassword`}>Forgot password?</StyledLink>
                             </Grid>
                             <LightPurpleButton type="submit" fullWidth variant="contained" sx={{ mt: 3 }}>
                                 {loader ? <CircularProgress size={24} color="inherit" /> : "Login"}
                             </LightPurpleButton>
-                            <Button
-                                fullWidth
-                                onClick={guestModeHandler}
-                                variant="outlined"
-                                sx={{ mt: 2, mb: 3, color: "#7f56da", borderColor: "#7f56da" }}
-                            >
-                                Login as Guest
-                            </Button>
                             {role === "Admin" && (
                                 <Grid container>
                                     <Grid>Don't have an account?</Grid>

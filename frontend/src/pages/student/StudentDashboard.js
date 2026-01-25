@@ -17,9 +17,12 @@ import StudentProfile from './StudentProfile';
 import StudentSubjects from './StudentSubjects';
 import ViewStdAttendance from './ViewStdAttendance';
 import StudentComplain from './StudentComplain';
+import ViewFee from './ViewFee';
 import Logout from '../Logout'
 import AccountMenu from '../../components/AccountMenu';
 import { AppBar, Drawer } from '../../components/styles';
+import StudentDocuments from './documentRelated/StudentDocuments';
+import StudentHomework from './StudentHomework';
 
 const StudentDashboard = () => {
     const [open, setOpen] = useState(true);
@@ -57,7 +60,7 @@ const StudentDashboard = () => {
                         <AccountMenu />
                     </Toolbar>
                 </AppBar>
-                <Drawer variant="permanent" open={open} sx={open ? styles.drawerStyled : styles.hideDrawer}>
+                <Drawer variant="permanent" open={open} sx={styles.drawerStyled}>
                     <Toolbar sx={styles.toolBarStyled}>
                         <IconButton onClick={toggleDrawer}>
                             <ChevronLeftIcon />
@@ -75,12 +78,12 @@ const StudentDashboard = () => {
                         <Route path='*' element={<Navigate to="/" />} />
                         <Route path="/Student/dashboard" element={<StudentHomePage />} />
                         <Route path="/Student/profile" element={<StudentProfile />} />
-
-                        <Route path="/Student/subjects" element={<StudentSubjects />} />
                         <Route path="/Student/subjects" element={<StudentSubjects />} />
                         <Route path="/Student/attendance" element={<ViewStdAttendance />} />
+                        <Route path="/Student/documents" element={<StudentDocuments />} />
+                        <Route path="/Student/fee" element={<ViewFee />} />
                         <Route path="/Student/complain" element={<StudentComplain />} />
-
+                        <Route path="/Student/homework" element={<StudentHomework />} />
                         <Route path="/logout" element={<Logout />} />
                     </Routes>
                 </Box>
@@ -110,10 +113,5 @@ const styles = {
     drawerStyled: {
         display: "flex"
     },
-    hideDrawer: {
-        display: 'flex',
-        '@media (max-width: 600px)': {
-            display: 'none',
-        },
-    },
 }
+

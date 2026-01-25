@@ -3,8 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
     Box, Typography, Paper, Grid, Container, Button,
     Table, TableBody, TableCell, TableContainer, TableHead,
-    TableRow, Chip, FormControl, InputLabel, Select, MenuItem,
-    TextField, Card, CardContent, Breadcrumbs, Link
+    TableRow, Chip, Card, CardContent, Breadcrumbs, Link
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PersonIcon from '@mui/icons-material/Person';
@@ -12,7 +11,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import axios from 'axios';
 
-const StudentAttendance = () => {
+const ClassAttendance = () => {
     const dispatch = useDispatch();
     const { currentUser } = useSelector((state) => state.user);
 
@@ -220,18 +219,22 @@ const StudentAttendance = () => {
             <Paper sx={{ p: 2, mb: 3 }}>
                 <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} sm={6} md={4}>
-                        <TextField
-                            fullWidth
-                            label="Select Date"
+                        <input
                             type="date"
                             value={selectedDate}
                             onChange={(e) => setSelectedDate(e.target.value)}
-                            InputLabelProps={{ shrink: true }}
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                borderRadius: '5px',
+                                border: '1px solid #ccc',
+                                fontSize: '16px'
+                            }}
                         />
                     </Grid>
                     <Grid item xs={12} sm={6} md={4}>
                         <Button 
-                            variant="outlined" 
+                            variant="contained" 
                             onClick={fetchStudentsAndAttendance}
                         >
                             Refresh
@@ -303,7 +306,7 @@ const StudentAttendance = () => {
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2" color="textSecondary">
-                                                {attendance?.subName || '-'}
+                                                {attendance?.subName?.subName || attendance?.subName || '-'}
                                             </Typography>
                                         </TableCell>
                                     </TableRow>
@@ -348,5 +351,5 @@ const StudentAttendance = () => {
     );
 };
 
-export default StudentAttendance;
+export default ClassAttendance;
 

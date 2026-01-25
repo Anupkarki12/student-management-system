@@ -1,59 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Grid,
   Paper,
   Box,
   Container,
-  CircularProgress,
-  Backdrop,
 } from '@mui/material';
 import { AccountCircle, School, Group } from '@mui/icons-material';
 import styled, { keyframes } from 'styled-components';
-import { useDispatch, useSelector } from 'react-redux';
-import { loginUser } from '../redux/userRelated/userHandle';
-import Popup from '../components/Popup';
 
-const ChooseUser = ({ visitor }) => {
-  const dispatch = useDispatch()
+const ChooseUser = () => {
   const navigate = useNavigate()
-  const password = "zxc"
-
-  const { status, currentUser, currentRole } = useSelector(state => state.user);
-
-  const [loader, setLoader] = useState(false)
-  const [showPopup, setShowPopup] = useState(false);
-  const [message, setMessage] = useState("");
 
   const navigateHandler = (user) => {
-    let fields = {};
     if (user === "Admin") {
-      if (visitor === "guest") fields = { email: "yogendra@12", password }
-      else { navigate('/Adminlogin'); return; }
+      navigate('/Adminlogin');
+      return;
     }
     if (user === "Student") {
-      if (visitor === "guest") fields = { rollNum: "1", studentName: "Dipesh Awasthi", password }
-      else { navigate('/Studentlogin'); return; }
+      navigate('/Studentlogin');
+      return;
     }
     if (user === "Teacher") {
-      if (visitor === "guest") fields = { email: "tony@12", password }
-      else { navigate('/Teacherlogin'); return; }
+      navigate('/Teacherlogin');
+      return;
     }
-    setLoader(true);
-    dispatch(loginUser(fields, user));
   }
-
-  useEffect(() => {
-    if (status === 'success' || currentUser !== null) {
-      if (currentRole === 'Admin') navigate('/Admin/dashboard');
-      else if (currentRole === 'Student') navigate('/Student/dashboard');
-      else if (currentRole === 'Teacher') navigate('/Teacher/dashboard');
-    } else if (status === 'error') {
-      setLoader(false)
-      setMessage("Network Error")
-      setShowPopup(true)
-    }
-  }, [status, currentRole, navigate, currentUser]);
 
   return (
     <StyledContainer>
@@ -96,16 +68,6 @@ const ChooseUser = ({ visitor }) => {
           </Grid>
         </Grid>
       </Container>
-
-      <Backdrop
-        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={loader}
-      >
-        <CircularProgress color="inherit" />
-        Please Wait
-      </Backdrop>
-
-      <Popup message={message} setShowPopup={setShowPopup} showPopup={showPopup} />
     </StyledContainer>
   );
 };

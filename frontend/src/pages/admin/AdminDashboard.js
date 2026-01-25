@@ -31,6 +31,7 @@ import SubjectForm from './subjectRelated/SubjectForm';
 import ViewSubject from './subjectRelated/ViewSubject';
 
 import AddTeacher from './teacherRelated/AddTeacher';
+import AssignTeacher from './teacherRelated/AssignTeacher';
 import ChooseClass from './teacherRelated/ChooseClass';
 import ChooseSubject from './teacherRelated/ChooseSubject';
 import ShowTeachers from './teacherRelated/ShowTeachers';
@@ -42,6 +43,12 @@ import ShowClasses from './classRelated/ShowClasses';
 import AccountMenu from '../../components/AccountMenu';
 import { ViewStudent } from './studentRelated/ViewStudent';
 import styled from 'styled-components';
+import AddFee from './feeRelated/AddFee';
+import ShowAllFees from './feeRelated/ShowAllFees';
+import ViewStudentFee from './feeRelated/ViewStudentFee';
+import ShowAllDocuments from './documentRelated/ShowAllDocuments';
+import AllStudentMarks from './studentRelated/AllStudentMarks';
+import ClassAttendance from './studentRelated/ClassAttendance';
 
 const AdminDashboard = () => {
     const [open, setOpen] = useState(false);
@@ -129,6 +136,21 @@ const AdminDashboard = () => {
                     <Route path="/Admin/teachers/choosesubject/:id" element={<ChooseSubject situation="Norm" />} />
                     <Route path="/Admin/teachers/choosesubject/:classID/:teacherID" element={<ChooseSubject situation="Teacher" />} />
                     <Route path="/Admin/teachers/addteacher/:id" element={<AddTeacher />} />
+                    <Route path="/Admin/teachers/assign" element={<AssignTeacher />} />
+
+                    {/* Fee */}
+                    <Route path="/Admin/addfee" element={<AddFee />} />
+                    <Route path="/Admin/fees" element={<ShowAllFees />} />
+                    <Route path="/Admin/students/student/fee/:id" element={<ViewStudentFee />} />
+
+                    {/* Document */}
+                    <Route path="/Admin/documents" element={<ShowAllDocuments />} />
+
+                    {/* Marks */}
+                    <Route path="/Admin/allmarks" element={<AllStudentMarks />} />
+
+                    {/* Attendance */}
+                    <Route path="/Admin/attendance" element={<ClassAttendance />} />
 
                     <Route path="/logout" element={<Logout />} />
                 </Routes>
@@ -171,5 +193,6 @@ const MainContent = styled(Box)`
     height: 100vh;
     overflow-y: auto;
     padding: 24px;
-    background: rgba(255,255,255,0.03);
-`;
+    background: #f0f2f5;
+ `;
+

@@ -45,12 +45,13 @@ const ShowTeachers = () => {
     }
 
     const deleteHandler = (deleteID, address) => {
-        // console.log(deleteID);
-        // console.log(address);
-        // setMessage("Sorry the delete function has been disabled for now.")
-        // setShowPopup(true)
-
+        // Reset response state before delete to avoid showing "No records" message
+        dispatch({ type: 'teacher/getDeleteSuccess', payload: null });
+        
         dispatch(deleteUser(deleteID, address)).then(() => {
+            // Clear the teachersList temporarily to force re-fetch
+            dispatch({ type: 'teacher/getSuccess', payload: [] });
+            // Then fetch fresh data
             dispatch(getAllTeachers(currentUser._id));
         });
     };
@@ -65,8 +66,8 @@ const ShowTeachers = () => {
         return {
             name: teacher.name,
             teachSubject: teacher.teachSubject?.subName || null,
-            teachSclass: teacher.teachSclass.sclassName,
-            teachSclassID: teacher.teachSclass._id,
+            teachSclass: teacher.teachSclass?.sclassName || 'Not Assigned',
+            teachSclassID: teacher.teachSclass?._id || '',
             id: teacher._id,
         };
     });

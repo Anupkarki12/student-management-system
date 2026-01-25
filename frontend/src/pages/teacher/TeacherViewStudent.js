@@ -18,8 +18,8 @@ const TeacherViewStudent = () => {
 
     const address = "Student"
     const studentID = params.id
-    const teachSubject = currentUser.teachSubject?.subName
-    const teachSubjectID = currentUser.teachSubject?._id
+    const teachSubject = currentUser?.teachSubject?.subName
+    const teachSubjectID = currentUser?.teachSubject?._id
 
     useEffect(() => {
         dispatch(getUserDetails(studentID, address));

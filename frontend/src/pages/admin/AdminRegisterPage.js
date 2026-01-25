@@ -2,9 +2,10 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { Grid, Box, Typography, Paper, Checkbox, FormControlLabel, TextField, CssBaseline, IconButton, InputAdornment, CircularProgress} from '@mui/material';
+import { Grid, Box, Typography, Paper, Checkbox, FormControlLabel, TextField, CssBaseline, IconButton, InputAdornment, CircularProgress, Button} from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import bgpic from "../../assets/designlogin.jpg"
 import { LightPurpleButton } from '../../components/buttonStyles';
 import { registerUser } from '../../redux/userRelated/userHandle';
@@ -29,6 +30,10 @@ const AdminRegisterPage = () => {
     const [passwordError, setPasswordError] = useState(false);
     const [adminNameError, setAdminNameError] = useState(false);
     const [schoolNameError, setSchoolNameError] = useState(false);
+    
+    const [photo, setPhoto] = useState(null)
+    const [photoPreview, setPhotoPreview] = useState(null)
+    
     const role = "Admin"
 
     const handleSubmit = (event) => {
@@ -47,7 +52,10 @@ const AdminRegisterPage = () => {
             return;
         }
 
-        const fields = { name, email, password, role, schoolName }
+        const fields = photo 
+            ? { name, email, password, role, schoolName, photo }
+            : { name, email, password, role, schoolName };
+        
         setLoader(true)
         dispatch(registerUser(fields, role))
     };
@@ -58,6 +66,23 @@ const AdminRegisterPage = () => {
         if (name === 'password') setPasswordError(false);
         if (name === 'adminName') setAdminNameError(false);
         if (name === 'schoolName') setSchoolNameError(false);
+    };
+
+    const handlePhotoChange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            setPhoto(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPhotoPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const removePhoto = () => {
+        setPhoto(null);
+        setPhotoPreview(null);
     };
 
     useEffect(() => {
@@ -97,6 +122,71 @@ const AdminRegisterPage = () => {
                             You will be able to add students and faculty and
                             manage the system.
                         </Typography>
+                        
+                        {/* Photo Upload */}
+                        <Box sx={{ mb: 2, mt: 2 }}>
+                            {!photoPreview ? (
+                                <Box
+                                    sx={{
+                                        border: '2px dashed #ccc',
+                                        borderRadius: 1,
+                                        p: 2,
+                                        textAlign: 'center',
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                            borderColor: 'primary.main',
+                                            backgroundColor: '#f5f5f5'
+                                        }
+                                    }}
+                                    onClick={() => document.getElementById('admin-photo-upload').click()}
+                                >
+                                    <CloudUploadIcon sx={{ fontSize: 40, color: '#ccc', mb: 1 }} />
+                                    <Typography variant="body2" color="textSecondary">
+                                        Upload Photo (Optional)
+                                    </Typography>
+                                </Box>
+                            ) : (
+                                <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                                    <img 
+                                        src={photoPreview} 
+                                        alt="Admin preview" 
+                                        style={{ 
+                                            width: 120, 
+                                            height: 120, 
+                                            objectFit: 'cover',
+                                            borderRadius: '50%',
+                                            border: '3px solid #7f56da'
+                                        }} 
+                                    />
+                                    <Button
+                                        variant="contained"
+                                        color="error"
+                                        size="small"
+                                        onClick={removePhoto}
+                                        sx={{ 
+                                            position: 'absolute',
+                                            top: -5,
+                                            right: -5,
+                                            minWidth: 'auto',
+                                            width: 28,
+                                            height: 28,
+                                            p: 0,
+                                            borderRadius: '50%'
+                                        }}
+                                    >
+                                        ×
+                                    </Button>
+                                </Box>
+                            )}
+                            <input
+                                id="admin-photo-upload"
+                                type="file"
+                                accept="image/*"
+                                onChange={handlePhotoChange}
+                                style={{ display: 'none' }}
+                            />
+                        </Box>
+
                         <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 2 }}>
                             <TextField
                                 margin="normal"
@@ -215,3 +305,4 @@ const StyledLink = styled(Link)`
   text-decoration: none;
   color: #7f56da;
 `;
+

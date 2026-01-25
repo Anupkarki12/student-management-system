@@ -13,8 +13,8 @@ const StudentComplain = () => {
 
     const { status, currentUser, error } = useSelector(state => state.user);
 
-    const user = currentUser._id
-    const school = currentUser.school._id
+    const user = currentUser?._id
+    const school = currentUser?.school?._id
     const address = "Complain"
 
     const [loader, setLoader] = useState(false)
