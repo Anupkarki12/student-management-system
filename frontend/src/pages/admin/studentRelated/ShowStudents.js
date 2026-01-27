@@ -24,6 +24,8 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PersonIcon from '@mui/icons-material/Person';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import { exportToExcel, getCurrentDateString } from '../../../utils/excelExport';
 
 const ShowStudents = () => {
     const navigate = useNavigate();
@@ -34,6 +36,8 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
 
     // Use sclassStudents for the student list
     const studentsList = sclassStudents;
+
+    console.log("StudentList:", studentsList)
 
     console.log('Redux state sclassStudents:', sclassStudents);
     console.log('Using studentsList:', studentsList);
@@ -181,6 +185,27 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
         },
     ];
 
+    // Export students to Excel
+    const handleExportStudents = () => {
+        if (!studentsList || studentsList.length === 0) {
+            alert('No students to export');
+            return;
+        }
+
+        const exportData = studentsList.map((student) => ({
+            'Roll Number': student.rollNum,
+            'Name': student.name,
+            'Class': selectedClass?.sclassName || 'N/A',
+            'Email': student.email || '-',
+            'Phone': student.phone || '-',
+            'Address': student.address || '-',
+            'Created At': student.createdAt ? new Date(student.createdAt).toLocaleDateString() : '-'
+        }));
+
+        const fileName = `Students_${selectedClass?.sclassName || 'All'}_${getCurrentDateString()}`;
+        exportToExcel(exportData, fileName, 'Students');
+    };
+
     // Render classes as cards
     const renderClassesView = () => (
         <Box>
@@ -272,9 +297,19 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
                 <Typography variant="h5" component="h1">
                     Students - Class {selectedClass?.sclassName}
                 </Typography>
-                <GreenButton variant="contained" onClick={() => navigate(`/Admin/class/addstudents/${selectedClass._id}`)}>
-                    Add Student
-                </GreenButton>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <GreenButton 
+                        variant="contained" 
+                        startIcon={<FileDownloadIcon />}
+                        onClick={handleExportStudents}
+                        disabled={!studentsList || studentsList.length === 0}
+                    >
+                        Export Excel
+                    </GreenButton>
+                    <GreenButton variant="contained" onClick={() => navigate(`/Admin/class/addstudents/${selectedClass._id}`)}>
+                        Add Student
+                    </GreenButton>
+                </Box>
             </Box>
 
             {loading ? (

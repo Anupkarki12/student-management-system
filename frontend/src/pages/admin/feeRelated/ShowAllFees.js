@@ -15,6 +15,15 @@ import WarningIcon from '@mui/icons-material/Warning';
 import PaymentIcon from '@mui/icons-material/Payment';
 import Popup from '../../../components/Popup';
 import { GreenButton } from '../../../components/buttonStyles';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import { 
+    exportToExcel, 
+    getCurrentDateString, 
+    monthsList, 
+    getCurrentYear, 
+    getMonthYearOptions,
+    formatDate 
+} from '../../../utils/excelExport';
 
 const ShowAllFees = () => {
     const dispatch = useDispatch();
@@ -26,6 +35,7 @@ const ShowAllFees = () => {
     const [showPopup, setShowPopup] = useState(false);
     const [message, setMessage] = useState("");
     const [selectedClass, setSelectedClass] = useState("");
+    const [selectedMonth, setSelectedMonth] = useState("");
 
     useEffect(() => {
         if (currentUser) {
@@ -174,7 +184,6 @@ const ShowAllFees = () => {
 
     const allSummary = calculateAllSummary();
     const allFees = getFlattenedFees();
-    const paymentPercentage = allSummary.total > 0 ? ((allSummary.paid + allSummary.partial) / allSummary.total * 100).toFixed(1) : 0;
 
     // Get unique classes from the fee records
     const getUniqueClasses = () => {
@@ -190,6 +199,102 @@ const ShowAllFees = () => {
     };
 
     const uniqueClasses = getUniqueClasses();
+
+    // Get unique months from the fee records
+    const getUniqueMonths = () => {
+        if (!feesList || !Array.isArray(feesList)) return [];
+        
+        const months = new Set();
+        feesList.forEach((fee) => {
+            if (fee.feeDetails && fee.feeDetails.length > 0) {
+                fee.feeDetails.forEach((detail) => {
+                    if (detail.month) {
+                        months.add(detail.month);
+                    }
+                });
+            }
+        });
+        return Array.from(months).sort((a, b) => {
+            const monthsOrder = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            const [monthA, yearA] = a.split(' ');
+            const [monthB, yearB] = b.split(' ');
+            if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
+            return monthsOrder.indexOf(monthA) - monthsOrder.indexOf(monthB);
+        });
+    };
+
+    const uniqueMonths = getUniqueMonths();
+
+    // Export fees to Excel
+    const handleExportFees = () => {
+        const feesToExport = getFlattenedFees();
+        if (feesToExport.length === 0) {
+            alert('No fees to export');
+            return;
+        }
+
+        const exportData = feesToExport.map((fee) => ({
+            'Student Name': fee.studentName,
+            'Roll Number': fee.rollNum,
+            'Class': fee.className,
+            'Month': fee.month,
+            'Amount (₹)': fee.amount,
+            'Paid Amount (₹)': fee.paidAmount || 0,
+            'Due Amount (₹)': (fee.amount - (fee.paidAmount || 0)),
+            'Due Date': formatDate(fee.dueDate),
+            'Payment Date': formatDate(fee.paymentDate),
+            'Status': fee.status,
+            'Description': fee.description || '-'
+        }));
+
+        const monthSuffix = selectedMonth ? `_${selectedMonth.replace(' ', '_')}` : '';
+        const classSuffix = selectedClass ? `_Class_${uniqueClasses.find(c => c._id === selectedClass)?.sclassName || ''}` : '';
+        const fileName = `Fees${monthSuffix}${classSuffix}_${getCurrentDateString()}`;
+        exportToExcel(exportData, fileName, 'Fees');
+    };
+
+    // Get filtered fees for display
+    const getFilteredFeesForDisplay = () => {
+        let fees = getFlattenedFees();
+        
+        // Filter by selected month
+        if (selectedMonth) {
+            fees = fees.filter(fee => fee.month === selectedMonth);
+        }
+        
+        return fees;
+    };
+
+    const displayFees = getFilteredFeesForDisplay();
+    const displaySummary = calculateDisplaySummary(displayFees);
+
+    function calculateDisplaySummary(fees) {
+        if (fees.length === 0) {
+            return { total: 0, paid: 0, partial: 0, unpaid: 0 };
+        }
+        
+        let total = 0;
+        let paid = 0;
+        let partial = 0;
+        let unpaid = 0;
+        
+        fees.forEach((detail) => {
+            total += detail.amount;
+            if (detail.status === 'Paid') {
+                paid += detail.amount;
+            } else if (detail.status === 'Partial') {
+                partial += detail.paidAmount || (detail.amount / 2);
+                unpaid += detail.amount - (detail.paidAmount || (detail.amount / 2));
+            } else {
+                unpaid += detail.amount;
+            }
+        });
+        
+        return { total, paid, partial, unpaid };
+    }
+
+    const paymentPercentage = displaySummary.total > 0 ? ((displaySummary.paid + displaySummary.partial) / displaySummary.total * 100).toFixed(1) : 0;
 
     if (loading) {
         return (
@@ -307,7 +412,7 @@ const ShowAllFees = () => {
 
             {/* Filter Section */}
             <Card sx={{ borderRadius: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', mb: 3 }}>
-                <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                     <FormControl size="small" sx={{ minWidth: 200 }}>
                         <InputLabel>Filter by Class</InputLabel>
                         <Select
@@ -333,8 +438,45 @@ const ShowAllFees = () => {
                         />
                     )}
                     
+                    <FormControl size="small" sx={{ minWidth: 180 }}>
+                        <InputLabel>Filter by Month</InputLabel>
+                        <Select
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            label="Filter by Month"
+                        >
+                            <MenuItem value="">All Months</MenuItem>
+                            {uniqueMonths.map((month) => (
+                                <MenuItem key={month} value={month}>
+                                    {month}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    
+                    {selectedMonth && (
+                        <Chip 
+                            label={selectedMonth}
+                            onDelete={() => setSelectedMonth("")}
+                            color="secondary"
+                            variant="outlined"
+                        />
+                    )}
+                    
+                    <Box sx={{ flexGrow: 1 }} />
+                    
+                    <GreenButton 
+                        variant="contained" 
+                        startIcon={<FileDownloadIcon />}
+                        onClick={handleExportFees}
+                        disabled={allFees.length === 0}
+                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                    >
+                        Export Excel
+                    </GreenButton>
+                    
                     <Typography variant="body2" color="textSecondary">
-                        {allFees.length} record{allFees.length !== 1 ? 's' : ''} found
+                        {displayFees.length} record{displayFees.length !== 1 ? 's' : ''} found
                     </Typography>
                 </Box>
             </Card>

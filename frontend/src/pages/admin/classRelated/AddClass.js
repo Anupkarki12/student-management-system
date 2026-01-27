@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Box, Button, CircularProgress, Stack, TextField } from "@mui/material";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { addStuff } from '../../../redux/userRelated/userHandle';
 import { underControl } from '../../../redux/userRelated/userSlice';
+import { updateSclass, getClassDetails } from '../../../redux/sclassRelated/sclassHandle';
 import { BlueButton } from "../../../components/buttonStyles";
 import Popup from "../../../components/Popup";
 import Classroom from "../../../assets/classroom.png";
@@ -14,9 +15,13 @@ const AddClass = () => {
 
     const dispatch = useDispatch()
     const navigate = useNavigate()
+    const { id } = useParams() // Get class ID from URL if editing
 
     const userState = useSelector(state => state.user);
+    const sclassState = useSelector(state => state.sclass);
+    
     const { status, currentUser, response, error, tempDetails } = userState;
+    const { sclassDetails } = sclassState;
 
     const adminID = currentUser._id
     const address = "Sclass"
@@ -24,6 +29,24 @@ const AddClass = () => {
     const [loader, setLoader] = useState(false)
     const [message, setMessage] = useState("");
     const [showPopup, setShowPopup] = useState(false);
+    
+    // Check if we're in edit mode
+    const isEditMode = !!id;
+
+    // If in edit mode, fetch class details and pre-fill
+    useEffect(() => {
+        if (isEditMode && sclassDetails && sclassDetails._id !== id) {
+            // Fetch class details if not already loaded
+            dispatch(getClassDetails(id, "Sclass"));
+        }
+    }, [isEditMode, id, dispatch]);
+
+    // Set class name when details are loaded
+    useEffect(() => {
+        if (isEditMode && sclassDetails && sclassDetails._id === id) {
+            setSclassName(sclassDetails.sclassName || "");
+        }
+    }, [isEditMode, id, sclassDetails]);
 
     const fields = {
         sclassName,
@@ -33,11 +56,18 @@ const AddClass = () => {
     const submitHandler = (event) => {
         event.preventDefault()
         setLoader(true)
-        dispatch(addStuff(fields, address))
+        
+        if (isEditMode) {
+            // Update existing class
+            dispatch(updateSclass(fields, id, address))
+        } else {
+            // Create new class
+            dispatch(addStuff(fields, address))
+        }
     };
 
     useEffect(() => {
-        if (status === 'added' && tempDetails) {
+        if (status === 'added' && tempDetails && !isEditMode) {
             navigate("/Admin/classes/class/" + tempDetails._id)
             dispatch(underControl())
             setLoader(false)
@@ -52,7 +82,8 @@ const AddClass = () => {
             setShowPopup(true)
             setLoader(false)
         }
-    }, [status, navigate, error, response, dispatch, tempDetails]);
+    }, [status, navigate, error, response, dispatch, tempDetails, isEditMode]);
+
     return (
         <>
             <StyledContainer>
@@ -70,7 +101,7 @@ const AddClass = () => {
                     <form onSubmit={submitHandler}>
                         <Stack spacing={3}>
                             <TextField
-                                label="Create a class"
+                                label={isEditMode ? "Edit Class Name" : "Create a class"}
                                 variant="outlined"
                                 value={sclassName}
                                 onChange={(event) => {
@@ -86,7 +117,7 @@ const AddClass = () => {
                                 type="submit"
                                 disabled={loader}
                             >
-                                {loader ? <CircularProgress size={24} color="inherit" /> : "Create"}
+                                {loader ? <CircularProgress size={24} color="inherit" /> : (isEditMode ? "Update" : "Create")}
                             </BlueButton>
                             <Button variant="outlined" onClick={() => navigate(-1)}>
                                 Go Back

@@ -9,6 +9,8 @@ import {
 import GradeIcon from '@mui/icons-material/Grade';
 import SaveIcon from '@mui/icons-material/Save';
 import axios from 'axios';
+import { formatNepaliDate } from '../../utils/nepaliDate';
+import NepaliDatePicker from '../../components/NepaliDatePicker';
 
 const TeacherMarks = () => {
     const dispatch = useDispatch();
@@ -214,11 +216,9 @@ const TeacherMarks = () => {
     };
 
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        const date = new Date(dateString);
+        if (date.toString() === 'Invalid Date') return 'N/A';
+        return formatNepaliDate(date, { format: 'full', showDayName: false });
     };
 
     const hasExistingMark = (studentId) => {
@@ -308,13 +308,10 @@ const TeacherMarks = () => {
                         </FormControl>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
-                        <TextField
-                            fullWidth
+                        <NepaliDatePicker
                             label="Exam Date"
-                            type="date"
                             value={examDate}
-                            onChange={(e) => setExamDate(e.target.value)}
-                            InputLabelProps={{ shrink: true }}
+                            onChange={(date) => setExamDate(date)}
                         />
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>

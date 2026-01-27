@@ -6,6 +6,7 @@ import { underControl } from '../../../redux/userRelated/userSlice';
 import { CircularProgress, Button, TextField, MenuItem, Box, Typography, Paper } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import Popup from '../../../components/Popup';
+import NepaliDatePicker from '../../../components/NepaliDatePicker';
 
 const AddDocument = () => {
     const dispatch = useDispatch();
@@ -183,32 +184,27 @@ const AddDocument = () => {
                     </TextField>
 
                     {teacherSubjects.length > 0 && (
-                        <TextField
-                            fullWidth
-                            select
-                            label="Subject"
-                            value={subjectID}
-                            onChange={(event) => setSubjectID(event.target.value)}
-                            margin="normal"
-                            variant="outlined"
-                        >
-                            {teacherSubjects.map((subject) => (
-                                <MenuItem key={subject._id} value={subject._id}>
-                                    {subject.subName}
-                                </MenuItem>
-                            ))}
-                        </TextField>
-                    )}
-
                     <TextField
                         fullWidth
-                        type="date"
-                        label="Expiration Date (Optional)"
-                        value={expirationDate}
-                        onChange={(event) => setExpirationDate(event.target.value)}
+                        select
+                        label="Subject"
+                        value={subjectID}
+                        onChange={(event) => setSubjectID(event.target.value)}
                         margin="normal"
                         variant="outlined"
-                        InputLabelProps={{ shrink: true }}
+                    >
+                        {teacherSubjects.map((subject) => (
+                            <MenuItem key={subject._id} value={subject._id}>
+                                {subject.subName}
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                    )}
+
+                    <NepaliDatePicker
+                        label="Expiration Date (Optional)"
+                        value={expirationDate}
+                        onChange={(date) => setExpirationDate(date)}
                     />
 
                     <Button

@@ -15,6 +15,11 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import DescriptionIcon from '@mui/icons-material/Description';
 import GradeIcon from '@mui/icons-material/Grade';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import QuizIcon from '@mui/icons-material/Quiz';
+import GroupIcon from '@mui/icons-material/Group';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 
 const SideBar = () => {
     const location = useLocation();
@@ -57,11 +62,41 @@ const SideBar = () => {
                     </ListItemIcon>
                     <ListItemText primary="Students" />
                 </ListItemButton>
+                <ListItemButton component={Link} to="/Admin/parents">
+                    <ListItemIcon>
+                        <GroupIcon color={location.pathname.startsWith("/Admin/parents") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Parents" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Admin/staff">
+                    <ListItemIcon>
+                        <PeopleAltIcon color={location.pathname.startsWith("/Admin/staff") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Staff" />
+                </ListItemButton>
                 <ListItemButton component={Link} to="/Admin/fees">
                     <ListItemIcon>
                         <PaymentIcon color={location.pathname.startsWith("/Admin/fees") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Fees" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Admin/salary">
+                    <ListItemIcon>
+                        <AttachMoneyIcon color={location.pathname.startsWith("/Admin/salary") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Salary" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Admin/routines">
+                    <ListItemIcon>
+                        <ScheduleIcon color={location.pathname.startsWith("/Admin/routines") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Routines" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Admin/exam-routine">
+                    <ListItemIcon>
+                        <QuizIcon color={location.pathname.startsWith("/Admin/exam-routine") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Exam Routine" />
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Admin/documents">
                     <ListItemIcon>
@@ -116,4 +151,5 @@ const SideBar = () => {
     )
 }
 
-export default SideBar
+export default SideBar;
+

@@ -6,6 +6,7 @@ import {
     TableContainer, TableHead, TableRow, Chip, Grid
 } from '@mui/material';
 import PaymentIcon from '@mui/icons-material/Payment';
+import { formatNepaliDate } from '../../utils/nepaliDate';
 
 const ViewFee = () => {
     const dispatch = useDispatch();
@@ -42,7 +43,9 @@ const ViewFee = () => {
 
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString();
+        const date = new Date(dateString);
+        if (date.toString() === 'Invalid Date') return 'N/A';
+        return formatNepaliDate(date, { format: 'full', showDayName: false });
     };
 
     const calculateSummary = () => {

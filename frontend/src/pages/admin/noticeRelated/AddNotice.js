@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { addStuff } from '../../../redux/userRelated/userHandle';
 import { underControl } from '../../../redux/userRelated/userSlice';
-import { CircularProgress } from '@mui/material';
+import { CircularProgress, TextField, Button, Paper, Typography, Box } from '@mui/material';
 import Popup from '../../../components/Popup';
+import NepaliDatePicker from '../../../components/NepaliDatePicker';
 
 const AddNotice = () => {
   const dispatch = useDispatch();
@@ -42,40 +43,61 @@ const AddNotice = () => {
   }, [status, navigate, error, response, dispatch]);
 
   return (
-    <>
-      <div className="register">
-        <form className="registerForm" onSubmit={submitHandler}>
-          <span className="registerTitle">Add Notice</span>
-          <label>Title</label>
-          <input className="registerInput" type="text" placeholder="Enter notice title..."
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', p: 3 }}>
+      <Paper elevation={3} sx={{ p: 4, maxWidth: 500, width: '100%' }}>
+        <Typography variant="h5" component="h1" gutterBottom sx={{ textAlign: 'center' }}>
+          Add Notice
+        </Typography>
+        <form onSubmit={submitHandler}>
+          <TextField
+            fullWidth
+            label="Title"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            required />
+            required
+            margin="normal"
+            variant="outlined"
+          />
 
-          <label>Details</label>
-          <input className="registerInput" type="text" placeholder="Enter notice details..."
+          <TextField
+            fullWidth
+            label="Details"
             value={details}
             onChange={(event) => setDetails(event.target.value)}
-            required />
+            required
+            margin="normal"
+            variant="outlined"
+            multiline
+            rows={3}
+          />
 
-          <label>Date</label>
-          <input className="registerInput" type="date" placeholder="Enter notice date..."
+          <NepaliDatePicker
+            label="Date"
             value={date}
-            onChange={(event) => setDate(event.target.value)}
-            required />
+            onChange={(newDate) => setDate(newDate)}
+            required
+          />
 
-          <button className="registerButton" type="submit" disabled={loader}>
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            color="primary"
+            disabled={loader}
+            sx={{ mt: 3, mb: 2, py: 1.5 }}
+          >
             {loader ? (
               <CircularProgress size={24} color="inherit" />
             ) : (
-              'Add'
+              'Add Notice'
             )}
-          </button>
+          </Button>
         </form>
-      </div>
+      </Paper>
       <Popup message={message} setShowPopup={setShowPopup} showPopup={showPopup} />
-    </>
+    </Box>
   );
 };
 
 export default AddNotice;
+

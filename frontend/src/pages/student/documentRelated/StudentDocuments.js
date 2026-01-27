@@ -35,11 +35,22 @@ const StudentDocuments = () => {
     }, [dispatch, currentUser, currentRole]);
 
     const handleDownload = (document) => {
+        console.log('Downloading document:', document);
         const link = document.filePath;
         if (link) {
             const baseUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:5000';
-            const fullUrl = `${baseUrl}/${link}`;
+            // Ensure the path is correctly formatted for static file serving
+            let fullUrl;
+            if (link.startsWith('uploads/')) {
+                fullUrl = `${baseUrl}/${link}`;
+            } else {
+                fullUrl = `${baseUrl}/${link}`;
+            }
+            console.log('Download URL:', fullUrl);
             window.open(fullUrl, '_blank');
+        } else {
+            console.error('No file path found for document:', document);
+            alert('File path not found. Please contact administrator.');
         }
     };
 

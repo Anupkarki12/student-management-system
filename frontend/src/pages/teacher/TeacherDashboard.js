@@ -29,6 +29,7 @@ import TakeAttendance from './TakeAttendance';
 import Homework from './Homework';
 import TeacherNotes from './TeacherNotes';
 import TeacherMarks from './TeacherMarks';
+import TeacherExamRoutine from './examRoutineRelated/TeacherExamRoutine';
 
 const TeacherDashboard = () => {
     const [open, setOpen] = useState(true);
@@ -98,6 +99,8 @@ const TeacherDashboard = () => {
 
                         <Route path="/Teacher/class/student/attendance/:studentID/:subjectID" element={<StudentAttendance situation="Subject" />} />
                         <Route path="/Teacher/class/student/marks/:studentID/:subjectID" element={<StudentExamMarks situation="Subject" />} />
+
+                        <Route path="/Teacher/exam-routine" element={<TeacherExamRoutine />} />
 
                         <Route path="/logout" element={<Logout />} />
                     </Routes>

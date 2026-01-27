@@ -1,5 +1,6 @@
+
 import * as React from 'react';
-import { Divider, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Chip, Typography } from '@mui/material';
+import { Divider, ListItemButton, ListItemIcon, ListItemText, ListSubheader } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 import HomeIcon from '@mui/icons-material/Home';
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
@@ -10,36 +11,12 @@ import GradeIcon from '@mui/icons-material/Grade';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ClassIcon from '@mui/icons-material/Class';
+import QuizIcon from '@mui/icons-material/Quiz';
 import { useSelector } from 'react-redux';
-import { useState, useEffect } from 'react';
-import axios from 'axios';
 
 const TeacherSideBar = () => {
     const { currentUser } = useSelector((state) => state.user);
     const location = useLocation();
-    const [teacherClasses, setTeacherClasses] = useState([]);
-    const [loading, setLoading] = useState(false);
-
-    const teacherId = currentUser?._id;
-
-    useEffect(() => {
-        if (teacherId) {
-            fetchTeacherClasses();
-        }
-    }, [teacherId]);
-
-    const fetchTeacherClasses = async () => {
-        setLoading(true);
-        try {
-            const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Teacher/Classes/${teacherId}`);
-            if (Array.isArray(result.data) && result.data.length > 0) {
-                setTeacherClasses(result.data);
-            }
-        } catch (error) {
-            console.error('Error fetching teacher classes:', error);
-        }
-        setLoading(false);
-    };
 
     const isActive = (path) => location.pathname.startsWith(path);
 
@@ -104,25 +81,27 @@ const TeacherSideBar = () => {
                 </ListItemButton>
             </React.Fragment>
 
-            {/* Show all assigned classes */}
-            {teacherClasses.length > 0 && (
-                <>
-                    <Divider sx={{ my: 1 }} />
-                    <ListSubheader component="div" inset>
-                        My Classes
-                    </ListSubheader>
-                    <React.Fragment>
-                        {teacherClasses.map((cls) => (
-                            <ListItemButton key={cls._id} component={Link} to={`/Teacher/class/${cls._id}`}>
-                                <ListItemIcon>
-                                    <ClassIcon color={isActive(`/Teacher/class/${cls._id}`) ? 'primary' : 'inherit'} />
-                                </ListItemIcon>
-                                <ListItemText primary={`Class ${cls.sclassName}`} />
-                            </ListItemButton>
-                        ))}
-                    </React.Fragment>
-                </>
-            )}
+            {/* Link to view all classes - classes are shown on Home page */}
+            <Divider sx={{ my: 1 }} />
+            
+            <ListSubheader component="div" inset>
+                Classes
+            </ListSubheader>
+            
+            <React.Fragment>
+                <ListItemButton component={Link} to="/Teacher/class">
+                    <ListItemIcon>
+                        <ClassIcon color={isActive("/Teacher/class") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="My Classes" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Teacher/exam-routine">
+                    <ListItemIcon>
+                        <QuizIcon color={isActive("/Teacher/exam-routine") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Exam Routine" />
+                </ListItemButton>
+            </React.Fragment>
             
             <Divider sx={{ my: 1 }} />
             

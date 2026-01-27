@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react';
-import { Container, Grid, Paper, Typography, Box, Card, CardContent, CircularProgress } from '@mui/material';
+import { Container, Grid, Paper, Typography, Box, Card, CardContent, CircularProgress, Button } from '@mui/material';
 import SeeNotice from '../../components/SeeNotice';
 import CountUp from 'react-countup';
 import styled from 'styled-components';
@@ -9,7 +10,9 @@ import Tests from "../../assets/assignment.svg";
 import Time from "../../assets/time.svg";
 import axios from 'axios';
 import ClassIcon from '@mui/icons-material/Class';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 
 const StyledPaper = styled(Paper)`
   padding: 16px;
@@ -44,6 +47,7 @@ const TeacherHomePage = () => {
     const [teacherClasses, setTeacherClasses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const navigate = useNavigate();
 
     const teacherId = currentUser?._id;
 
@@ -56,7 +60,8 @@ const TeacherHomePage = () => {
     const fetchTeacherClasses = async () => {
         setLoading(true);
         try {
-            const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Teacher/Classes/${teacherId}`);
+            const apiUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:5000';
+            const result = await axios.get(`${apiUrl}/Teacher/Classes/${teacherId}`);
             if (Array.isArray(result.data)) {
                 setTeacherClasses(result.data);
             } else {
@@ -65,17 +70,20 @@ const TeacherHomePage = () => {
             setError(null);
         } catch (err) {
             console.error('Error fetching teacher classes:', err);
-            setError('Failed to load assigned classes');
+            setError('Failed to load assigned classes: ' + (err.response?.data?.message || err.message));
         }
         setLoading(false);
     };
 
-    // Calculate totals across all classes
-    const totalStudents = teacherClasses.reduce((sum, cls) => {
-        // We don't have direct student count, so we'll show class count instead
-        return sum;
-    }, 0);
+    const handleRefresh = () => {
+        fetchTeacherClasses();
+    };
 
+    const handleClassClick = (classId) => {
+        navigate(`/Teacher/class/${classId}`);
+    };
+
+    // Calculate totals
     const totalClasses = teacherClasses.length;
     const totalSubjects = teacherClasses.reduce((sum, cls) => {
         return sum + (cls.subjects?.length || 0);
@@ -91,19 +99,30 @@ const TeacherHomePage = () => {
                 ) : error ? (
                     <Paper sx={{ p: 3, mb: 3, bgcolor: '#ffebee' }}>
                         <Typography color="error">{error}</Typography>
+                        <Button onClick={handleRefresh} sx={{ mt: 2 }}>Retry</Button>
                     </Paper>
                 ) : (
                     <>
                         {/* Assigned Classes Section */}
                         {teacherClasses.length > 0 && (
                             <Box sx={{ mb: 4 }}>
-                                <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
-                                    My Assigned Classes
-                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                    <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                                        My Assigned Classes
+                                    </Typography>
+                                    <Button 
+                                        variant="outlined" 
+                                        startIcon={<RefreshIcon />}
+                                        onClick={handleRefresh}
+                                        size="small"
+                                    >
+                                        Refresh
+                                    </Button>
+                                </Box>
                                 <Grid container spacing={2}>
                                     {teacherClasses.map((cls) => (
                                         <Grid item xs={12} sm={6} md={4} key={cls._id}>
-                                            <ClassCard>
+                                            <ClassCard onClick={() => handleClassClick(cls._id)}>
                                                 <CardContent>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                                         <ClassIcon color="primary" sx={{ mr: 1 }} />
@@ -193,3 +212,4 @@ const TeacherHomePage = () => {
 }
 
 export default TeacherHomePage
+

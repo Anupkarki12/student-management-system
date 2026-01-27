@@ -11,6 +11,8 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import axios from 'axios';
+import { formatNepaliDate } from '../../utils/nepaliDate';
+import NepaliDatePicker from '../../components/NepaliDatePicker';
 
 const Homework = () => {
     const dispatch = useDispatch();
@@ -127,11 +129,9 @@ const Homework = () => {
     };
 
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        const date = new Date(dateString);
+        if (date.toString() === 'Invalid Date') return 'N/A';
+        return formatNepaliDate(date, { format: 'full', showDayName: false });
     };
 
     const getClassName = (hw) => {
@@ -297,13 +297,11 @@ const Homework = () => {
                             onChange={(e) => setNewHomework({ ...newHomework, description: e.target.value })}
                             sx={{ mb: 2 }}
                         />
-                        <TextField
-                            fullWidth
-                            label="Due Date"
-                            type="date"
+                        <NepaliDatePicker
+                            label="Due Date *"
                             value={newHomework.dueDate}
-                            onChange={(e) => setNewHomework({ ...newHomework, dueDate: e.target.value })}
-                            InputLabelProps={{ shrink: true }}
+                            onChange={(date) => setNewHomework({ ...newHomework, dueDate: date })}
+                            required
                         />
                     </Box>
                 </DialogContent>

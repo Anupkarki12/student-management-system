@@ -11,6 +11,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import PaymentIcon from '@mui/icons-material/Payment';
 import DescriptionIcon from '@mui/icons-material/Description';
 import HomeworkIcon from '@mui/icons-material/HomeWork';
+import QuizIcon from '@mui/icons-material/Quiz';
 
 const StudentSideBar = () => {
     const location = useLocation();
@@ -40,6 +41,12 @@ const StudentSideBar = () => {
                         <HomeworkIcon color={location.pathname.startsWith("/Student/homework") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Homework" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Student/exam-routine">
+                    <ListItemIcon>
+                        <QuizIcon color={location.pathname.startsWith("/Student/exam-routine") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Exam Routine" />
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Student/documents">
                     <ListItemIcon>

@@ -5,6 +5,7 @@ import { getAllStudents } from '../../../redux/studentRelated/studentHandle';
 import { addFee, getAllFees } from '../../../redux/feeRelated/feeHandle';
 import { Box, Button, Container, MenuItem, Select, FormControl, InputLabel, TextField, Typography, Paper, Grid } from '@mui/material';
 import Popup from '../../../components/Popup';
+import NepaliDatePicker from '../../../components/NepaliDatePicker';
 
 const AddFee = () => {
     const dispatch = useDispatch();
@@ -154,13 +155,10 @@ const AddFee = () => {
                     </Grid>
 
                     <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            label="Due Date"
-                            type="date"
+                        <NepaliDatePicker
+                            label="Due Date *"
                             value={dueDate}
-                            onChange={(e) => setDueDate(e.target.value)}
-                            InputLabelProps={{ shrink: true }}
+                            onChange={(date) => setDueDate(date)}
                             required
                         />
                     </Grid>

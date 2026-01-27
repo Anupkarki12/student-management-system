@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import * as React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -26,8 +27,11 @@ const TeacherClassDetails = () => {
 
     const teacherId = currentUser?._id;
 
+    // Fetch teacher classes once on mount
     useEffect(() => {
-        fetchTeacherClasses();
+        if (teacherId) {
+            fetchTeacherClasses();
+        }
     }, [teacherId]);
 
     useEffect(() => {
@@ -39,7 +43,8 @@ const TeacherClassDetails = () => {
 
     const fetchTeacherClasses = async () => {
         try {
-            const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Teacher/Classes/${teacherId}`);
+            const apiUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:5000';
+            const result = await axios.get(`${apiUrl}/Teacher/Classes/${teacherId}`);
             if (Array.isArray(result.data) && result.data.length > 0) {
                 setTeacherClasses(result.data);
                 // If no class selected and we have classes, select the first one
@@ -54,7 +59,8 @@ const TeacherClassDetails = () => {
 
     const fetchClassSubjects = async () => {
         try {
-            const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Teacher/Subjects/${teacherId}/${selectedClassId}`);
+            const apiUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:5000';
+            const result = await axios.get(`${apiUrl}/Teacher/Subjects/${teacherId}/${selectedClassId}`);
             if (Array.isArray(result.data)) {
                 setClassSubjects(result.data);
             }
@@ -102,7 +108,6 @@ const TeacherClassDetails = () => {
         };
 
         const handleAttendance = () => {
-            // Navigate to attendance page with class ID
             navigate(`/Teacher/attendance?classId=${selectedClassId}`)
         }
         const handleMarks = () => {
@@ -124,9 +129,6 @@ const TeacherClassDetails = () => {
             }
             setOpen(false);
         };
-        
-        const selectedClass = teacherClasses.find(c => c._id === selectedClassId);
-        const subjectID = classSubjects[0]?._id || '';
 
         return (
             <>
@@ -194,7 +196,9 @@ const TeacherClassDetails = () => {
     return (
         <>
             {loading && teacherClasses.length === 0 ? (
-                <div>Loading...</div>
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                    <Typography>Loading...</Typography>
+                </Box>
             ) : (
                 <>
                     <Typography variant="h4" align="center" gutterBottom>
@@ -223,7 +227,20 @@ const TeacherClassDetails = () => {
                                                     <Typography variant="h6">Class {cls.sclassName}</Typography>
                                                 </Box>
                                                 <Typography variant="body2" sx={{ mt: 1 }}>
-                                                    {cls.subjects?.length || 0} subjects
+                                                    {cls.subjects?.length > 0 ? (
+                                                        <Box>
+                                                            <Typography variant="caption" color="textSecondary">
+                                                                Subjects:
+                                                            </Typography>
+                                                            {cls.subjects.map((sub, idx) => (
+                                                                <Typography key={sub._id || idx} variant="body2">
+                                                                    • {sub.subName}
+                                                                </Typography>
+                                                            ))}
+                                                        </Box>
+                                                    ) : (
+                                                        'No subjects assigned'
+                                                    )}
                                                 </Typography>
                                             </CardContent>
                                         </Card>
@@ -259,3 +276,4 @@ const TeacherClassDetails = () => {
 };
 
 export default TeacherClassDetails;
+

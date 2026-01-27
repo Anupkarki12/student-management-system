@@ -12,6 +12,7 @@ import InsertChartOutlinedIcon from '@mui/icons-material/InsertChartOutlined';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import { StyledTableCell, StyledTableRow } from '../../components/styles';
+import { formatNepaliDate } from '../../utils/nepaliDate';
 
 const ViewStdAttendance = () => {
     const dispatch = useDispatch();
@@ -111,7 +112,7 @@ const ViewStdAttendance = () => {
                                                     <TableBody>
                                                         {allData.map((data, index) => {
                                                             const date = new Date(data.date);
-                                                            const dateString = date.toString() !== "Invalid Date" ? date.toISOString().substring(0, 10) : "Invalid Date";
+                                                            const dateString = date.toString() !== "Invalid Date" ? formatNepaliDate(date, { format: 'full', showDayName: false }) : "Invalid Date";
                                                             return (
                                                                 <StyledTableRow key={index}>
                                                                     <StyledTableCell component="th" scope="row">

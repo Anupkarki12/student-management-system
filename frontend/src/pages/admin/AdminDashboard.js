@@ -49,6 +49,20 @@ import ViewStudentFee from './feeRelated/ViewStudentFee';
 import ShowAllDocuments from './documentRelated/ShowAllDocuments';
 import AllStudentMarks from './studentRelated/AllStudentMarks';
 import ClassAttendance from './studentRelated/ClassAttendance';
+import ShowSalary from './salaryRelated/ShowSalary';
+import AddRoutine from './routineRelated/AddRoutine';
+import ShowRoutines from './routineRelated/ShowRoutines';
+import AdminExamRoutine from './examRoutineRelated/AdminExamRoutine';
+
+// Staff imports
+import AddStaff from './staffRelated/AddStaff';
+import ShowStaff from './staffRelated/ShowStaff';
+import StaffDetails from './staffRelated/StaffDetails';
+
+// Parent imports
+import AddParent from './parentRelated/AddParent';
+import ShowParents from './parentRelated/ShowParents';
+import ParentDetails from './parentRelated/ParentDetails';
 
 const AdminDashboard = () => {
     const [open, setOpen] = useState(false);
@@ -118,6 +132,7 @@ const AdminDashboard = () => {
 
                     {/* Class */}
                     <Route path="/Admin/addclass" element={<AddClass />} />
+                    <Route path="/Admin/editclass/:id" element={<AddClass />} />
                     <Route path="/Admin/classes" element={<ShowClasses />} />
                     <Route path="/Admin/classes/class/:id" element={<ClassDetails />} />
                     <Route path="/Admin/class/addstudents/:id" element={<AddStudent situation="Class" />} />
@@ -138,6 +153,16 @@ const AdminDashboard = () => {
                     <Route path="/Admin/teachers/addteacher/:id" element={<AddTeacher />} />
                     <Route path="/Admin/teachers/assign" element={<AssignTeacher />} />
 
+                    {/* Parent */}
+                    <Route path="/Admin/addparent" element={<AddParent />} />
+                    <Route path="/Admin/parents" element={<ShowParents />} />
+                    <Route path="/Admin/parents/:id" element={<ParentDetails />} />
+
+                    {/* Staff */}
+                    <Route path="/Admin/addstaff" element={<AddStaff />} />
+                    <Route path="/Admin/staff" element={<ShowStaff />} />
+                    <Route path="/Admin/staff/:id" element={<StaffDetails />} />
+
                     {/* Fee */}
                     <Route path="/Admin/addfee" element={<AddFee />} />
                     <Route path="/Admin/fees" element={<ShowAllFees />} />
@@ -151,6 +176,16 @@ const AdminDashboard = () => {
 
                     {/* Attendance */}
                     <Route path="/Admin/attendance" element={<ClassAttendance />} />
+
+                    {/* Salary */}
+                    <Route path="/Admin/salary" element={<ShowSalary />} />
+
+                    {/* Routines */}
+                    <Route path="/Admin/routines" element={<ShowRoutines />} />
+                    <Route path="/Admin/routines/add" element={<AddRoutine />} />
+
+                    {/* Exam Routine */}
+                    <Route path="/Admin/exam-routine" element={<AdminExamRoutine />} />
 
                     <Route path="/logout" element={<Logout />} />
                 </Routes>

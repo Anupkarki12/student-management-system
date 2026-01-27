@@ -23,6 +23,7 @@ import AccountMenu from '../../components/AccountMenu';
 import { AppBar, Drawer } from '../../components/styles';
 import StudentDocuments from './documentRelated/StudentDocuments';
 import StudentHomework from './StudentHomework';
+import StudentExamRoutine from './examRoutineRelated/StudentExamRoutine';
 
 const StudentDashboard = () => {
     const [open, setOpen] = useState(true);
@@ -84,6 +85,8 @@ const StudentDashboard = () => {
                         <Route path="/Student/fee" element={<ViewFee />} />
                         <Route path="/Student/complain" element={<StudentComplain />} />
                         <Route path="/Student/homework" element={<StudentHomework />} />
+                        <Route path="/Student/exam-routine" element={<StudentExamRoutine />} />
+
                         <Route path="/logout" element={<Logout />} />
                     </Routes>
                 </Box>

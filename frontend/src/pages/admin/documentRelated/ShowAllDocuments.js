@@ -4,6 +4,7 @@ import { getAllDocuments, deleteDocument } from '../../../redux/documentRelated/
 import { Paper, Typography, Box, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
+import { formatNepaliDate } from '../../../utils/nepaliDate';
 
 const ShowAllDocuments = () => {
     const dispatch = useDispatch();
@@ -26,21 +27,29 @@ const ShowAllDocuments = () => {
     };
 
     const handleDownload = (document) => {
+        console.log('Downloading document:', document);
         const link = document.filePath;
         if (link) {
             const baseUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:5000';
-            const fullUrl = `${baseUrl}/${link}`;
+            // Ensure the path is correctly formatted for static file serving
+            let fullUrl;
+            if (link.startsWith('uploads/')) {
+                fullUrl = `${baseUrl}/${link}`;
+            } else {
+                fullUrl = `${baseUrl}/${link}`;
+            }
+            console.log('Download URL:', fullUrl);
             window.open(fullUrl, '_blank');
+        } else {
+            console.error('No file path found for document:', document);
+            alert('File path not found. Please contact administrator.');
         }
     };
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        if (date.toString() === 'Invalid Date') return 'N/A';
+        return formatNepaliDate(date, { format: 'full', showDayName: false });
     };
 
     const formatFileSize = (bytes) => {

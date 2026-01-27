@@ -28,6 +28,7 @@ const AssignTeacher = () => {
         setLoading(true);
         try {
             const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/SclassList/${schoolId}`);
+            console.log("data:",result)
             if (result.data && result.data.length > 0) {
                 setClasses(result.data);
             } else {
@@ -38,6 +39,7 @@ const AssignTeacher = () => {
         }
         setLoading(false);
     };
+    console.log(classes);
 
     const handleClassClick = async (cls) => {
         setSelectedClass(cls);
@@ -54,12 +56,15 @@ const AssignTeacher = () => {
                 subjects: result.data.subjects || [],
                 alreadyAssigned: result.data.alreadyAssigned || []
             });
+            console.log("Available data:",result)
         } catch (error) {
             console.error('Error fetching available data:', error);
             setMessage({ type: 'error', text: 'Error loading data' });
         }
         setLoading(false);
     };
+
+    console.log("Availa:",availableData)
 
     const handleBackToClasses = () => {
         setSelectedClass(null);

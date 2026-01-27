@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { IconButton, Box, Menu, MenuItem, ListItemIcon, Tooltip } from '@mui/material';
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { deleteUser } from '../../../redux/userRelated/userHandle';
@@ -69,6 +70,9 @@ const ShowClasses = () => {
       <ButtonContainer>
         <IconButton onClick={() => deleteHandler(row.id, "Sclass")} color="secondary">
           <DeleteIcon color="error" />
+        </IconButton>
+        <IconButton onClick={() => navigate("/Admin/editclass/" + row.id)} color="primary">
+          <EditIcon color="primary" />
         </IconButton>
         <BlueButton variant="contained"
           onClick={() => navigate("/Admin/classes/class/" + row.id)}>

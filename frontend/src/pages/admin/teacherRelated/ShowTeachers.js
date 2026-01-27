@@ -13,6 +13,8 @@ import { BlueButton, GreenButton } from '../../../components/buttonStyles';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import SpeedDialTemplate from '../../../components/SpeedDialTemplate';
 import Popup from '../../../components/Popup';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import { exportToExcel, getCurrentDateString } from '../../../utils/excelExport';
 
 const ShowTeachers = () => {
     const [page, setPage] = useState(0);
@@ -83,8 +85,39 @@ const ShowTeachers = () => {
         },
     ];
 
+    // Export teachers to Excel
+    const handleExportTeachers = () => {
+        if (!teachersList || teachersList.length === 0) {
+            alert('No teachers to export');
+            return;
+        }
+
+        const exportData = teachersList.map((teacher) => ({
+            'Name': teacher.name,
+            'Email': teacher.email || '-',
+            'Subject': teacher.teachSubject?.subName || 'Not Assigned',
+            'Class': teacher.teachSclass?.sclassName || 'Not Assigned',
+            'Phone': teacher.phone || '-',
+            'Address': teacher.address || '-',
+            'Created At': teacher.createdAt ? new Date(teacher.createdAt).toLocaleDateString() : '-'
+        }));
+
+        const fileName = `Teachers_${getCurrentDateString()}`;
+        exportToExcel(exportData, fileName, 'Teachers');
+    };
+
     return (
         <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+            <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <GreenButton 
+                    variant="contained" 
+                    startIcon={<FileDownloadIcon />}
+                    onClick={handleExportTeachers}
+                    disabled={!teachersList || teachersList.length === 0}
+                >
+                    Export Excel
+                </GreenButton>
+            </Box>
             <TableContainer>
                 <Table stickyHeader aria-label="sticky table">
                     <TableHead>

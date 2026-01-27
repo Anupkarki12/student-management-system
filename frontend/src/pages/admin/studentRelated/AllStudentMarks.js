@@ -9,6 +9,8 @@ import {
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PrintIcon from '@mui/icons-material/Print';
 import axios from 'axios';
+import NepaliDatePicker from '../../../components/NepaliDatePicker';
+import { formatNepaliDate } from '../../../utils/nepaliDate';
 
 const AllStudentMarks = () => {
     const { currentUser } = useSelector((state) => state.user);
@@ -208,13 +210,10 @@ const AllStudentMarks = () => {
                             </FormControl>
                         </Grid>
                         <Grid item xs={12} sm={6} md={3}>
-                            <TextField
-                                fullWidth
+                            <NepaliDatePicker
                                 label="Exam Date"
-                                type="date"
                                 value={examDate}
-                                onChange={(e) => setExamDate(e.target.value)}
-                                InputLabelProps={{ shrink: true }}
+                                onChange={(date) => setExamDate(date)}
                             />
                         </Grid>
                         <Grid item xs={12}>

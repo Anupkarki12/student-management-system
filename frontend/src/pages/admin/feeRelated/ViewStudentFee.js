@@ -13,6 +13,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Popup from '../../../components/Popup';
+import { formatNepaliDate } from '../../../utils/nepaliDate';
+import NepaliDatePicker from '../../../components/NepaliDatePicker';
 
 const ViewStudentFee = () => {
     const dispatch = useDispatch();
@@ -65,7 +67,9 @@ const ViewStudentFee = () => {
 
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString();
+        const date = new Date(dateString);
+        if (date.toString() === 'Invalid Date') return 'N/A';
+        return formatNepaliDate(date, { format: 'full', showDayName: false });
     };
 
     const handleEditClick = (feeDetail) => {
@@ -354,13 +358,10 @@ const ViewStudentFee = () => {
                             value={editDuesAmount}
                             onChange={(e) => setEditDuesAmount(e.target.value)}
                         />
-                        <TextField
-                            fullWidth
+                        <NepaliDatePicker
                             label="Payment Date"
-                            type="date"
                             value={editPaymentDate}
-                            onChange={(e) => setEditPaymentDate(e.target.value)}
-                            InputLabelProps={{ shrink: true }}
+                            onChange={(date) => setEditPaymentDate(date)}
                             helperText="Enter the date when payment was made"
                         />
                     </Box>
