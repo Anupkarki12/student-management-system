@@ -74,6 +74,11 @@ const studentSchema = new mongoose.Schema({
     passwordHistory: {
         type: [String],
         default: []
+    },
+    parent: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'parent',
+        default: null
     }
 });
 
