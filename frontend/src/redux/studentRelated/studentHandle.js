@@ -22,6 +22,19 @@ export const getAllStudents = (id) => async (dispatch) => {
     }
 }
 
+export const getStudentAttendance = (studentId, schoolId) => async (dispatch) => {
+    dispatch(getRequest());
+
+    try {
+        const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Student/${studentId}`);
+        if (result.data) {
+            dispatch(getSuccess(result.data));
+        }
+    } catch (error) {
+        dispatch(getError(error));
+    }
+}
+
 export const updateStudentFields = (id, fields, address) => async (dispatch) => {
     dispatch(getRequest());
 

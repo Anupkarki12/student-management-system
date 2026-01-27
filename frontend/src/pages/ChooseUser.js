@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box } from '@mui/material';
 import AccountTypeChooser from '../components/AccountTypeChooser';
 
 const ChooseUser = () => {
@@ -26,23 +25,16 @@ const ChooseUser = () => {
   };
 
   return (
-    <Box sx={{ 
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      py: 4
-    }}>
-      <AccountTypeChooser
-        onSelect={navigateHandler}
-        availableTypes={['Admin', 'Student', 'Teacher', 'Parent']}
-        title="Choose Your Account Type"
-        subtitle="Select the type of account you want to access"
-        columns={4}
-      />
-    </Box>
+    <AccountTypeChooser
+      onSelect={navigateHandler}
+      availableTypes={['Admin', 'Student', 'Teacher', 'Parent']}
+      title="Welcome Back"
+      subtitle="Choose your account type to continue"
+      columns={4}
+      schoolName="Student Management System"
+    />
   );
 };
 
 export default ChooseUser;
+

@@ -183,6 +183,32 @@ export const unlinkStudentFromParent = (parentId, studentId) => async (dispatch)
     }
 };
 
+export const getStudentsByParent = (parentId) => async (dispatch) => {
+    dispatch(getRequest());
+
+    try {
+        const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Parent/Students/${parentId}`);
+        if (result.data) {
+            dispatch(doneSuccess(result.data));
+        }
+    } catch (error) {
+        dispatch(getError(error));
+    }
+};
+
+export const getParentDashboard = (parentId) => async (dispatch) => {
+    dispatch(getRequest());
+
+    try {
+        const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Parent/Dashboard/${parentId}`);
+        if (result.data) {
+            dispatch(doneSuccess(result.data));
+        }
+    } catch (error) {
+        dispatch(getError(error));
+    }
+};
+
 // Upload profile photo
 export const uploadParentPhoto = (photo) => async (dispatch) => {
     dispatch(authRequest());

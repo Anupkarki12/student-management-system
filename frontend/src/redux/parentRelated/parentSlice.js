@@ -41,6 +41,7 @@ const parentSlice = createSlice({
             state.error = false;
             state.response = null;
             state.parent = action.payload;
+            state.status = "added";
         },
         getDeleteSuccess: (state) => {
             state.loading = false;
