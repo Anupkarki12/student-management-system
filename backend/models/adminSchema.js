@@ -26,7 +26,12 @@ const adminSchema = new mongoose.Schema({
     photo: {
         type: String,
         default: ""
+    },
+    passwordHistory: {
+        type: [String],
+        default: []
     }
 });
 
 module.exports = mongoose.model("admin", adminSchema)
+

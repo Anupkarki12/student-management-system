@@ -31,6 +31,18 @@ const studentSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    email: {
+        type: String,
+        default: ""
+    },
+    phone: {
+        type: String,
+        default: ""
+    },
+    address: {
+        type: String,
+        default: ""
+    },
     examResult: [
         {
             subName: {
@@ -58,7 +70,12 @@ const studentSchema = new mongoose.Schema({
             ref: 'subject',
             required: true
         }
-    }]
+    }],
+    passwordHistory: {
+        type: [String],
+        default: []
+    }
 });
 
 module.exports = mongoose.model("student", studentSchema);
+

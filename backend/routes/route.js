@@ -2,10 +2,16 @@ const router = require('express').Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { loginLimiter } = require('../middleware/rateLimit.js');
+
+// Error handling wrapper for async route handlers
+const asyncHandler = (fn) => (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+};
 
 // Controllers
 const { adminRegister, adminLogIn, getAdminDetail, adminForgotPassword} = require('../controllers/admin-controller.js');
-const { sclassCreate, sclassList, deleteSclass, deleteSclasses, getSclassDetail, getSclassStudents } = require('../controllers/class-controller.js');
+const { sclassCreate, sclassList, deleteSclass, deleteSclasses, getSclassDetail, getSclassStudents, updateSclass } = require('../controllers/class-controller.js');
 const { complainCreate, complainList } = require('../controllers/complain-controller.js');
 const { noticeCreate, noticeList, deleteNotices, deleteNotice, updateNotice } = require('../controllers/notice-controller.js');
 const {
@@ -20,8 +26,12 @@ const { createFee, getStudentFees, getAllStudentFees, updateFee, deleteFee } = r
 const { documentCreate, documentList, getTeacherDocuments, getSchoolDocuments, getStudentDocuments, deleteDocument, deleteDocuments } = require('../controllers/document-controller.js');
 const { createHomework, getHomework, getHomeworkByClass, getHomeworkForClass, deleteHomework } = require('../controllers/homework-controller.js');
 const { createTeacherNote, getTeacherNotes, deleteTeacherNote } = require('../controllers/teacherNote-controller.js');
-const { createMarks, getMarks, getStudentMarks, getClassMarks, deleteMarks, getTeacherClasses, getTeacherSubjectsByClass, getAllMarksForSchool, bulkCreateMarks } = require('../controllers/marks-controller.js');
-const { assignTeacherToClass, getTeacherAssignments, getClassAssignments, getAvailableTeachersForClass, deleteAssignment, getTeacherClasses: getTeacherClassesNew, getTeacherSubjectsByClass: getTeacherSubjectsByClassNew, getTeacherDetailsWithAssignments } = require('../controllers/teacherClassAssignment-controller.js');
+const { createMarks, getMarks, getStudentMarks, getClassMarks, deleteMarks, getAllMarksForSchool, bulkCreateMarks } = require('../controllers/marks-controller.js');
+const { assignTeacherToClass, getTeacherAssignments, getClassAssignments, getAvailableTeachersForClass, deleteAssignment, getTeacherClasses, getTeacherSubjectsByClass, getTeacherDetailsWithAssignments } = require('../controllers/teacherClassAssignment-controller.js');
+const { createRoutine, getRoutinesBySchool, getRoutineByClass, getRoutineById, deleteRoutine, getClassRoutine, getExamRoutine, createExamRoutine, getExamRoutinesBySchool, getTeacherExamRoutines, getStudentExamRoutines, deleteExamRoutine, fixExamRoutinePaths } = require('../controllers/routine-controller.js');
+const { createSalary, getSalariesBySchool, getSalaryByEmployee, calculateNetSalary, recordPayment, getPaymentHistory, deleteSalary, getSalarySummary } = require('../controllers/salary-controller.js');
+const staffController = require('../controllers/staff-controller.js');
+const parentController = require('../controllers/parent-controller.js');
 
 // Admin
 router.post('/AdminReg', adminRegister);
@@ -76,6 +86,7 @@ router.get("/Sclass/:id", getSclassDetail)
 router.get("/Sclass/Students/:id", getSclassStudents)
 router.delete("/Sclasses/:id", deleteSclasses)
 router.delete("/Sclass/:id", deleteSclass)
+router.put("/Sclass/:id", updateSclass)
 
 // Subject
 router.post('/SubjectCreate', subjectCreate);
@@ -267,4 +278,93 @@ router.get('/Class/AvailableTeachers/:classId/:schoolId', getAvailableTeachersFo
 router.delete('/Assignment/:id', deleteAssignment);
 router.get('/Teacher/Details/:teacherId', getTeacherDetailsWithAssignments);
 
+// Routine Routes
+router.post('/Routine/Create', createRoutine);
+router.get('/Routines/:schoolId', getRoutinesBySchool);
+router.get('/Routines/Class/:schoolId/:classId', getRoutineByClass);
+router.get('/Routine/:id', getRoutineById);
+router.delete('/Routine/:id', deleteRoutine);
+router.get('/Routine/Class/All/:schoolId/:classId', getClassRoutine);
+router.get('/Routine/Exam/:schoolId/:classId', getExamRoutine);
+
+// Exam Routine Routes (with file upload)
+const examRoutineUpload = multer({
+    storage: multer.diskStorage({
+        destination: function (req, file, cb) {
+            const examRoutinesDir = path.join(__dirname, '../uploads/exam-routines');
+            if (!fs.existsSync(examRoutinesDir)) {
+                fs.mkdirSync(examRoutinesDir, { recursive: true });
+            }
+            cb(null, examRoutinesDir);
+        },
+        filename: function (req, file, cb) {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            cb(null, uniqueSuffix + '-' + file.originalname);
+        }
+    }),
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
+    },
+    fileFilter: function (req, file, cb) {
+        // Accept only PDF files
+        const extname = path.extname(file.originalname).toLowerCase();
+        if (extname === '.pdf') {
+            cb(null, true);
+        } else {
+            cb(new Error('Only PDF files are allowed for exam routines.'), false);
+        }
+    }
+});
+
+router.post('/ExamRoutine/Create', examRoutineUpload.single('file'), handleMulterError, createExamRoutine);
+router.get('/ExamRoutine/Admin/:schoolId', getExamRoutinesBySchool);
+router.get('/ExamRoutine/Teacher/:teacherId', getTeacherExamRoutines);
+router.get('/ExamRoutine/Student/:schoolId/:classId', getStudentExamRoutines);
+router.delete('/ExamRoutine/:id', deleteExamRoutine);
+
+// Utility route to fix existing exam routine file paths
+router.post('/ExamRoutine/FixPaths', fixExamRoutinePaths);
+
+// Salary Routes
+router.post('/Salary/Create', createSalary);
+router.get('/Salaries/:schoolId', getSalariesBySchool);
+router.get('/Salary/:schoolId/:employeeType/:employeeId', getSalaryByEmployee);
+router.get('/Salary/Calculate/:salaryId', calculateNetSalary);
+router.post('/Salary/Payment/:salaryId', recordPayment);
+router.get('/Salary/PaymentHistory/:salaryId', getPaymentHistory);
+router.delete('/Salary/:id', deleteSalary);
+router.get('/Salary/Summary/:schoolId', getSalarySummary);
+
+// Staff Routes
+router.post('/StaffReg', staffController.staffRegister);
+router.post('/StaffLogin', staffController.staffLogIn);
+router.post('/StaffForgotPassword', staffController.staffForgotPassword);
+router.get('/Staffs/:id', staffController.getStaffs);
+router.get('/Staff/:id', staffController.getStaffDetail);
+router.delete('/Staffs/:id', staffController.deleteStaffs);
+router.delete('/Staff/:id', staffController.deleteStaff);
+router.put('/Staff/:id', staffController.updateStaff);
+router.post('/StaffAttendance/:id', staffController.staffAttendance);
+router.get('/Staff/Attendance/:id', staffController.getStaffAttendanceReport);
+router.put('/Staff/Salary/:id', staffController.updateSalary);
+router.get('/Staff/Salary/Calculate/:id', staffController.calculateNetSalary);
+router.get('/Staff/Salary/Summary/:schoolId', staffController.getStaffSalarySummary);
+router.put('/Staff/ClearAttendance/:id', staffController.clearStaffAttendance);
+
+// Parent Routes
+router.post('/ParentReg', parentController.parentRegister);
+router.post('/ParentLogin', parentController.parentLogIn);
+router.post('/ParentForgotPassword', parentController.parentForgotPassword);
+router.get('/Parents/:id', parentController.getParents);
+router.get('/Parent/:id', parentController.getParentDetail);
+router.get('/Parent/ByStudent/:studentId', parentController.getParentByStudent);
+router.delete('/Parents/:id', parentController.deleteParents);
+router.delete('/Parent/:id', parentController.deleteParent);
+router.put('/Parent/:id', parentController.updateParent);
+router.put('/Parent/Link/:parentId/:studentId', parentController.linkStudentToParent);
+router.put('/Parent/Unlink/:parentId/:studentId', parentController.unlinkStudentFromParent);
+router.get('/Parent/Students/:id', parentController.getStudentsByParent);
+router.get('/Parent/Dashboard/:id', parentController.getParentDashboard);
+
 module.exports = router;
+

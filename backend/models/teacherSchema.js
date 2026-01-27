@@ -47,7 +47,12 @@ const teacherSchema = new mongoose.Schema({
         absentCount: {
             type: String,
         }
-    }]
+    }],
+    passwordHistory: {
+        type: [String],
+        default: []
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model("teacher", teacherSchema)
+

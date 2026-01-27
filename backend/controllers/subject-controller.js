@@ -49,6 +49,7 @@ const allSubjects = async (req, res) => {
 const classSubjects = async (req, res) => {
     try {
         let subjects = await Subject.find({ sclassName: req.params.id })
+            .populate("teacher", "name")
         if (subjects.length > 0) {
             res.send(subjects)
         } else {
@@ -61,7 +62,7 @@ const classSubjects = async (req, res) => {
 
 const freeSubjectList = async (req, res) => {
     try {
-        let subjects = await Subject.find({ sclassName: req.params.id, teacher: { $exists: false } });
+        let subjects = await Subject.find({ sclassName: req.params.id, teacher: { $in: [null, undefined] } });
         if (subjects.length > 0) {
             res.send(subjects);
         } else {

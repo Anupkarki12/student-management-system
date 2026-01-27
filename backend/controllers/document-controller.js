@@ -166,7 +166,13 @@ const documentList = async (req, res) => {
         if (req.params.role === 'Admin') {
             documents = await Document.find({ school: req.params.id });
         } else if (req.params.role === 'Teacher') {
-            documents = await Document.find({ teacher: req.params.id });
+            documents = await Document.find({ 
+                $or: [
+                    { teacher: req.params.id },  // Teacher's own documents
+                    { teacher: null }             // Admin-uploaded documents
+                ],
+                school: req.params.schoolId || req.params.id
+            });
         } else if (req.params.role === 'Student') {
             documents = await Document.find({ 
                 school: req.params.schoolId,
@@ -189,9 +195,19 @@ const documentList = async (req, res) => {
 
 const getTeacherDocuments = async (req, res) => {
     try {
-        const documents = await Document.find({ teacher: req.params.id })
-            .populate('sclass', 'sclassName')
-            .populate('subject', 'subName');
+        // Fetch both teacher's own documents AND admin-uploaded documents (teacher: null)
+        const documents = await Document.find({
+            $or: [
+                { teacher: req.params.id },  // Teacher's own documents
+                { teacher: null }             // Admin-uploaded documents
+            ]
+        })
+        .populate('teacher', 'name')
+        .populate('sclass', 'sclassName')
+        .populate('subject', 'subName')
+        .sort({ uploadDate: -1 });
+        
+        console.log(`Found ${documents.length} documents for teacher ${req.params.id}`);
         
         if (documents.length > 0) {
             res.send(documents);
@@ -199,6 +215,7 @@ const getTeacherDocuments = async (req, res) => {
             res.send({ message: "No documents found" });
         }
     } catch (err) {
+        console.error('Error fetching teacher documents:', err);
         res.status(500).json(err);
     }
 };

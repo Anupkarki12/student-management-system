@@ -27,6 +27,39 @@ const sclassCreate = async (req, res) => {
     }
 };
 
+const updateSclass = async (req, res) => {
+    try {
+        const sclassId = req.params.id;
+        const { sclassName, adminID } = req.body;
+
+        // Check if another class with the same name already exists
+        const existingSclassByName = await Sclass.findOne({
+            sclassName: sclassName,
+            school: adminID,
+            _id: { $ne: sclassId }
+        });
+
+        if (existingSclassByName) {
+            res.send({ message: 'Sorry this class name already exists' });
+        }
+        else {
+            const updatedSclass = await Sclass.findByIdAndUpdate(
+                sclassId,
+                { sclassName: sclassName },
+                { new: true }
+            );
+            
+            if (updatedSclass) {
+                res.send(updatedSclass);
+            } else {
+                res.send({ message: "Class not found" });
+            }
+        }
+    } catch (err) {
+        res.status(500).json(err);
+    }
+};
+
 const sclassList = async (req, res) => {
     try {
         let sclasses = await Sclass.find({ school: req.params.id })
@@ -102,4 +135,4 @@ const deleteSclasses = async (req, res) => {
 }
 
 
-module.exports = { sclassCreate, sclassList, deleteSclass, deleteSclasses, getSclassDetail, getSclassStudents };
+module.exports = { sclassCreate, sclassList, deleteSclass, deleteSclasses, getSclassDetail, getSclassStudents, updateSclass };

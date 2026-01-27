@@ -24,6 +24,10 @@ const assignTeacherToClass = async (req, res) => {
         });
 
         await assignment.save();
+
+        // Also update the teacher field in the Subject document
+        await Subject.findByIdAndUpdate(subjectID, { teacher: teacherID });
+
         res.send(assignment);
     } catch (err) {
         console.error('Error assigning teacher:', err);
@@ -67,8 +71,11 @@ const getAvailableTeachersForClass = async (req, res) => {
         const { classId, schoolId } = req.params;
 
         const allTeachers = await Teacher.find({ school: schoolId });
-        const assignedAssignments = await TeacherClassAssignment.find({ sclass: classId });
-        const assignedTeacherIds = assignedAssignments.map(a => a.teacher.toString());
+        const assignedAssignments = await TeacherClassAssignment.find({ sclass: classId })
+            .populate('teacher', 'name email')
+            .populate('subject', 'subName subCode')
+            .populate('sclass', 'sclassName');
+        const assignedTeacherIds = assignedAssignments.map(a => a.teacher._id.toString());
 
         const availableTeachers = allTeachers.filter(
             teacher => !assignedTeacherIds.includes(teacher._id.toString())
@@ -91,6 +98,16 @@ const getAvailableTeachersForClass = async (req, res) => {
 const deleteAssignment = async (req, res) => {
     try {
         const { id } = req.params;
+        
+        // Get the assignment before deleting to find the subject ID
+        const assignment = await TeacherClassAssignment.findById(id);
+        if (!assignment) {
+            return res.status(404).json({ message: "Assignment not found" });
+        }
+        
+        // Clear the teacher field in the Subject document
+        await Subject.findByIdAndUpdate(assignment.subject, { teacher: null });
+        
         const result = await TeacherClassAssignment.findByIdAndDelete(id);
         res.send(result);
     } catch (err) {
