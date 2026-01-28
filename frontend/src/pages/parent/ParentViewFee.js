@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getStudentFee } from '../../redux/feeRelated/feeHandle';
+import { getParentDashboard } from '../../redux/parentRelated/parentHandle';
 import { 
     Box, Container, Typography, Paper, Table, TableBody, TableCell, 
     TableContainer, TableHead, TableRow, Chip, Grid, CircularProgress,
@@ -21,25 +22,42 @@ const ParentViewFee = () => {
 
     const [feeData, setFeeData] = useState(null);
     const [selectedChild, setSelectedChild] = useState(studentId || '');
+    const [dashboardData, setDashboardData] = useState(null);
 
     const getChildrenList = () => {
+        if (dashboardData?.students) {
+            return dashboardData.students;
+        }
         if (parentUserDetails?.students) {
             return parentUserDetails.students;
-        }
-        if (userDetails?.students) {
-            return userDetails.students;
         }
         return [];
     };
 
     const children = getChildrenList();
 
+    // Fetch parent dashboard data to get children list
+    useEffect(() => {
+        if (currentUser?._id) {
+            dispatch(getParentDashboard(currentUser._id));
+        }
+    }, [dispatch, currentUser]);
+
+    // Update dashboard data when parentUserDetails changes
+    useEffect(() => {
+        if (parentUserDetails?.students) {
+            setDashboardData(parentUserDetails);
+        }
+    }, [parentUserDetails]);
+
+    // Fetch fee data when a child is selected
     useEffect(() => {
         if (selectedChild) {
             dispatch(getStudentFee(selectedChild));
         }
     }, [dispatch, selectedChild]);
 
+    // Update fee data when feesList changes
     useEffect(() => {
         if (feesList && Array.isArray(feesList) && feesList.length > 0) {
             setFeeData(feesList[0]);
@@ -94,8 +112,9 @@ const ParentViewFee = () => {
     const summary = calculateSummary();
 
     const handleChildChange = (event) => {
-        setSelectedChild(event.target.value);
-        navigate(`/Parent/child/${event.target.value}/fees`);
+        const newChildId = event.target.value;
+        setSelectedChild(newChildId);
+        navigate(`/Parent/child/${newChildId}/fees`);
     };
 
     if (loading) {

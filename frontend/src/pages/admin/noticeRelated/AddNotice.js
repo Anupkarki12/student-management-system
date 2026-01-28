@@ -100,4 +100,3 @@ const AddNotice = () => {
 };
 
 export default AddNotice;
-

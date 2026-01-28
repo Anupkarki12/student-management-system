@@ -193,6 +193,18 @@ const StudentHomework = () => {
                                                     </Grid>
                                                     <Grid item xs={12} sm={6}>
                                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                            <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>
+                                                                Subject:
+                                                            </Typography>
+                                                            <Chip 
+                                                                label={hw.subject?.subName || 'General'}
+                                                                size="small"
+                                                                color="secondary"
+                                                            />
+                                                        </Box>
+                                                    </Grid>
+                                                    <Grid item xs={12} sm={6}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                             <CalendarTodayIcon sx={{ mr: 1, color: 'text.secondary' }} />
                                                             <Typography variant="body2">
                                                                 <strong>Due:</strong> {formatDate(hw.dueDate)}

@@ -20,6 +20,7 @@ import { getStudentAttendance } from '../../redux/studentRelated/studentHandle';
 import { StyledTableCell, StyledTableRow } from '../../components/styles';
 import { formatNepaliDate } from '../../utils/nepaliDate';
 import CustomBarChart from '../../components/CustomBarChart';
+import { getParentDashboard } from '../../redux/parentRelated/parentHandle';
 
 const ParentViewAttendance = () => {
     const dispatch = useDispatch();
@@ -27,33 +28,46 @@ const ParentViewAttendance = () => {
     const { studentId } = useParams();
 
     const { currentUser } = useSelector((state) => state.user);
-    const { userDetails, loading, response, error } = useSelector((state) => state.user);
+    const { userDetails: parentUserDetails, loading: parentLoading } = useSelector((state) => state.parent);
+    const { studentsList: studentDetails, loading: studentLoading } = useSelector((state) => state.student);
 
     const [openStates, setOpenStates] = useState({});
     const [subjectAttendance, setSubjectAttendance] = useState([]);
     const [selectedSection, setSelectedSection] = useState('table');
     const [selectedChild, setSelectedChild] = useState(studentId || '');
+    const [dashboardData, setDashboardData] = useState(null);
 
-    // Get children list from parent dashboard data
-    const { userDetails: parentUserDetails } = useSelector((state) => state.parent);
-
+    // Fetch parent dashboard data to get children list
     useEffect(() => {
         if (currentUser?._id) {
-            // Fetch children list first
+            dispatch(getParentDashboard(currentUser._id));
         }
-    }, [currentUser]);
+    }, [dispatch, currentUser]);
 
+    // Update dashboard data when parentUserDetails changes
     useEffect(() => {
-        if (selectedChild && currentUser?.school?._id) {
-            dispatch(getStudentAttendance(selectedChild, currentUser.school._id));
+        if (parentUserDetails?.students) {
+            setDashboardData(parentUserDetails);
         }
-    }, [dispatch, selectedChild, currentUser]);
+    }, [parentUserDetails]);
 
+    // Fetch attendance when a child is selected
     useEffect(() => {
-        if (userDetails?.attendance) {
-            setSubjectAttendance(userDetails.attendance);
+        if (selectedChild) {
+            // Try to get school ID from currentUser first, then from parentUserDetails
+            const schoolId = currentUser?.school?._id || parentUserDetails?.school?._id;
+            if (schoolId) {
+                dispatch(getStudentAttendance(selectedChild, schoolId));
+            }
         }
-    }, [userDetails]);
+    }, [dispatch, selectedChild, currentUser, parentUserDetails]);
+
+    // Update subject attendance when student details change
+    useEffect(() => {
+        if (studentDetails?.attendance) {
+            setSubjectAttendance(studentDetails.attendance);
+        }
+    }, [studentDetails]);
 
     const handleOpen = (subId) => {
         setOpenStates((prevState) => ({
@@ -115,16 +129,17 @@ const ParentViewAttendance = () => {
     };
 
     const handleChildChange = (event) => {
-        setSelectedChild(event.target.value);
-        navigate(`/Parent/child/${event.target.value}/attendance`);
+        const newChildId = event.target.value;
+        setSelectedChild(newChildId);
+        navigate(`/Parent/child/${newChildId}/attendance`);
     };
 
     const getChildrenList = () => {
+        if (dashboardData?.students) {
+            return dashboardData.students;
+        }
         if (parentUserDetails?.students) {
             return parentUserDetails.students;
-        }
-        if (userDetails?.students) {
-            return userDetails.students;
         }
         return [];
     };
@@ -270,7 +285,7 @@ const ParentViewAttendance = () => {
         );
     };
 
-    if (loading) {
+    if (parentLoading || studentLoading) {
         return (
             <Container sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
                 <CircularProgress />

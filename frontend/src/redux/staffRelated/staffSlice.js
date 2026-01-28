@@ -22,8 +22,12 @@ const staffSlice = createSlice({
             state.loading = false;
             state.error = false;
             state.response = action.payload;
-            if (action.payload && action.payload.message) {
+            // Set staffList if the payload is an array of staff
+            if (Array.isArray(action.payload)) {
+                state.staffList = action.payload;
+            } else if (action.payload && action.payload.message) {
                 state.response = action.payload.message;
+                state.staffList = [];
             }
         },
         getFailed: (state, action) => {

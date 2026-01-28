@@ -9,6 +9,7 @@ import feeReducer from './feeRelated/feeSlice';
 import { documentReducer } from './documentRelated/documentSlice';
 import staffReducer from './staffRelated/staffSlice';
 import parentReducer from './parentRelated/parentSlice';
+import salaryReducer from './salaryRelated/salarySlice';
 
 const store = configureStore({
     reducer: {
@@ -21,7 +22,8 @@ const store = configureStore({
         fee: feeReducer,
         document: documentReducer,
         staff: staffReducer,
-        parent: parentReducer
+        parent: parentReducer,
+        salary: salaryReducer
     },
 });
 

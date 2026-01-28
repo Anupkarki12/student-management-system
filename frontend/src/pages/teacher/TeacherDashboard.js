@@ -23,8 +23,6 @@ import TeacherHomePage from './TeacherHomePage';
 import TeacherProfile from './TeacherProfile';
 import TeacherViewStudent from './TeacherViewStudent';
 import StudentExamMarks from '../admin/studentRelated/StudentExamMarks';
-import AddDocument from './documentRelated/AddDocument';
-import ShowDocuments from './documentRelated/ShowDocuments';
 import TakeAttendance from './TakeAttendance';
 import Homework from './Homework';
 import TeacherNotes from './TeacherNotes';
@@ -85,8 +83,6 @@ const TeacherDashboard = () => {
                         <Route path='*' element={<Navigate to="/" />} />
                         <Route path="/Teacher/dashboard" element={<TeacherHomePage />} />
                         <Route path="/Teacher/profile" element={<TeacherProfile />} />
-                        <Route path="/Teacher/documents" element={<ShowDocuments />} />
-                        <Route path="/Teacher/adddocument" element={<AddDocument />} />
                         <Route path="/Teacher/complain" element={<TeacherComplain />} />
                         <Route path="/Teacher/attendance" element={<TakeAttendance />} />
                         <Route path="/Teacher/homework" element={<Homework />} />
@@ -132,3 +128,4 @@ const styles = {
         display: "flex"
     },
 }
+

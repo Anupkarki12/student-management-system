@@ -38,13 +38,16 @@ const ParentViewHomework = () => {
 
     const getStudentClassId = () => {
         const child = children.find(c => c.studentId === selectedChild);
-        return child?.classId || child?.sclassName?._id || '';
+        // Handle both string classId and sclassName object
+        if (child?.classId) return child.classId;
+        if (child?.sclassName?._id) return child.sclassName._id;
+        if (typeof child?.sclassName === 'string') return child.sclassName;
+        return '';
     };
 
     useEffect(() => {
-        const classId = getStudentClassId();
-        if (classId) {
-            fetchHomework(classId);
+        if (selectedChild) {
+            fetchHomework(selectedChild);
         } else {
             setHomework([]);
             setFilteredHomework([]);
@@ -55,11 +58,12 @@ const ParentViewHomework = () => {
         filterHomework();
     }, [homework, selectedDate]);
 
-    const fetchHomework = async (classId) => {
+    const fetchHomework = async (studentId) => {
         setLoading(true);
         setMessage({ type: '', text: '' });
         try {
-            const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Homework/Student/${classId}`);
+            // Use the new endpoint that takes studentId directly
+            const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Homework/StudentById/${studentId}`);
             
             if (result.data && result.data.message) {
                 setHomework([]);
@@ -177,7 +181,7 @@ const ParentViewHomework = () => {
                             <Grid item xs={12} sm={6} md={4}>
                                 <Button 
                                     variant="outlined" 
-                                    onClick={() => fetchHomework(getStudentClassId())}
+                                    onClick={() => fetchHomework(selectedChild)}
                                 >
                                     Refresh
                                 </Button>
@@ -233,13 +237,25 @@ const ParentViewHomework = () => {
                                                         {hw.description}
                                                     </Typography>
 
-                                                    <Grid container spacing={2}>
+                                                <Grid container spacing={2}>
                                                         <Grid item xs={12} sm={6}>
                                                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                                                 <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />
                                                                 <Typography variant="body2">
                                                                     <strong>Teacher:</strong> {hw.teacher?.name || 'Not specified'}
                                                                 </Typography>
+                                                            </Box>
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={6}>
+                                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                                <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>
+                                                                    Subject:
+                                                                </Typography>
+                                                                <Chip 
+                                                                    label={hw.subject?.subName || 'General'}
+                                                                    size="small"
+                                                                    color="secondary"
+                                                                />
                                                             </Box>
                                                         </Grid>
                                                         <Grid item xs={12} sm={6}>

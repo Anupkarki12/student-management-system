@@ -3,6 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
     parentList: [],
     parent: null,
+    userDetails: null,
     loading: false,
     error: null,
     response: null,
@@ -42,6 +43,10 @@ const parentSlice = createSlice({
             state.response = null;
             state.parent = action.payload;
             state.status = "added";
+            // For dashboard data, also set userDetails for backward compatibility
+            if (action.payload && action.payload.students) {
+                state.userDetails = action.payload;
+            }
         },
         getDeleteSuccess: (state) => {
             state.loading = false;
@@ -62,6 +67,27 @@ const parentSlice = createSlice({
             state.error = false;
             state.parent = action.payload;
             state.status = "success";
+            // Store students in userDetails for dashboard access
+            if (action.payload && action.payload.students) {
+                state.userDetails = {
+                    school: action.payload.school, // Store school info
+                    students: action.payload.students.map(student => ({
+                        studentId: student._id,
+                        name: student.name,
+                        rollNum: student.rollNum,
+                        class: student.sclassName?.sclassName,
+                        sclassName: student.sclassName, // Keep full sclassName object with _id for API calls
+                        photo: student.photo
+                    }))
+                };
+            }
+            // If no students but parent has school info, store it
+            if (action.payload && action.payload.school) {
+                if (!state.userDetails) {
+                    state.userDetails = {};
+                }
+                state.userDetails.school = action.payload.school;
+            }
         },
         authFailed: (state, action) => {
             state.loading = false;

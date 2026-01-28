@@ -9,9 +9,9 @@ import AnnouncementOutlinedIcon from '@mui/icons-material/AnnouncementOutlined';
 import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PaymentIcon from '@mui/icons-material/Payment';
-import DescriptionIcon from '@mui/icons-material/Description';
 import HomeworkIcon from '@mui/icons-material/HomeWork';
 import QuizIcon from '@mui/icons-material/Quiz';
+import NotesIcon from '@mui/icons-material/Notes';
 
 const StudentSideBar = () => {
     const location = useLocation();
@@ -30,6 +30,12 @@ const StudentSideBar = () => {
                     </ListItemIcon>
                     <ListItemText primary="Subjects" />
                 </ListItemButton>
+                <ListItemButton component={Link} to="/Student/notes">
+                    <ListItemIcon>
+                        <NotesIcon color={location.pathname.startsWith("/Student/notes") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Notes" />
+                </ListItemButton>
                 <ListItemButton component={Link} to="/Student/attendance">
                     <ListItemIcon>
                         <ClassOutlinedIcon color={location.pathname.startsWith("/Student/attendance") ? 'primary' : 'inherit'} />
@@ -47,12 +53,6 @@ const StudentSideBar = () => {
                         <QuizIcon color={location.pathname.startsWith("/Student/exam-routine") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Exam Routine" />
-                </ListItemButton>
-                <ListItemButton component={Link} to="/Student/documents">
-                    <ListItemIcon>
-                        <DescriptionIcon color={location.pathname.startsWith("/Student/documents") ? 'primary' : 'inherit'} />
-                    </ListItemIcon>
-                    <ListItemText primary="Documents" />
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Student/fee">
                     <ListItemIcon>
@@ -90,3 +90,4 @@ const StudentSideBar = () => {
 }
 
 export default StudentSideBar
+

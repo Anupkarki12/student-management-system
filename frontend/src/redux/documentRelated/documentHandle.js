@@ -23,6 +23,7 @@ export const getAllDocuments = (id, role, schoolId = null, classId = null) => as
         } else if (role === 'Admin') {
             url = `${process.env.REACT_APP_BASE_URL}/SchoolDocuments/${id}`;
         } else if (role === 'Student') {
+            console.log('Fetching documents with schoolId:', schoolId, 'classId:', classId);
             url = `${process.env.REACT_APP_BASE_URL}/StudentDocuments/${schoolId}/${classId}`;
         }
 
@@ -80,3 +81,4 @@ export const deleteDocument = (id, address) => async (dispatch) => {
         dispatch(deleteDocumentFailed(errorMessage));
     }
 };
+

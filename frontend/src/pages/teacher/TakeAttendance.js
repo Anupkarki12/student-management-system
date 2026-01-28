@@ -10,11 +10,9 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import SaveIcon from '@mui/icons-material/Save';
 import axios from 'axios';
-import NepaliDatePicker from '../../components/NepaliDatePicker';
 
 const TakeAttendance = () => {
-    const dispatch = useDispatch();
-    const { currentUser } = useSelector((state) => state.user);
+     const { currentUser } = useSelector((state) => state.user);
     
     const [classes, setClasses] = useState([]);
     const [subjects, setSubjects] = useState([]);
@@ -226,10 +224,13 @@ const TakeAttendance = () => {
                         </FormControl>
                     </Grid>
                     <Grid item xs={12} sm={6} md={4}>
-                        <NepaliDatePicker
-                            label="Date"
+                        <TextField
+                            fullWidth
+                            label="Date (AD)"
+                            type="date"
                             value={selectedDate}
-                            onChange={(date) => setSelectedDate(date)}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            InputLabelProps={{ shrink: true }}
                         />
                     </Grid>
                 </Grid>

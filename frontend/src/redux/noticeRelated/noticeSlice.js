@@ -5,30 +5,49 @@ const initialState = {
     loading: false,
     error: null,
     response: null,
+    status: "idle",
 };
 
 const noticeSlice = createSlice({
-    name: 'notice',
+    name: "notice",
     initialState,
     reducers: {
         getRequest: (state) => {
             state.loading = true;
-        },
-        getSuccess: (state, action) => {
-            state.noticesList = action.payload;
-            state.loading = false;
-            state.error = null;
+            state.error = false;
             state.response = null;
         },
-        getFailed: (state, action) => {
-            state.response = action.payload;
+        getSuccess: (state, action) => {
             state.loading = false;
-            state.error = null;
+            state.error = false;
+            state.response = action.payload;
+            if (Array.isArray(action.payload)) {
+                state.noticesList = action.payload;
+            } else if (action.payload && action.payload.message) {
+                state.response = action.payload.message;
+                state.noticesList = [];
+            }
+        },
+        getFailed: (state, action) => {
+            state.loading = false;
+            state.error = true;
+            state.response = action.payload;
         },
         getError: (state, action) => {
             state.loading = false;
-            state.error = action.payload;
-        }
+            state.error = true;
+            state.response = action.payload;
+        },
+        doneSuccess: (state, action) => {
+            state.loading = false;
+            state.error = false;
+            state.response = null;
+        },
+        getDeleteSuccess: (state) => {
+            state.loading = false;
+            state.error = false;
+            state.response = null;
+        },
     },
 });
 
@@ -36,7 +55,11 @@ export const {
     getRequest,
     getSuccess,
     getFailed,
-    getError
+    getError,
+    doneSuccess,
+    getDeleteSuccess,
 } = noticeSlice.actions;
 
 export const noticeReducer = noticeSlice.reducer;
+export default noticeSlice.reducer;
+

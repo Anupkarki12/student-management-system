@@ -46,13 +46,14 @@ import styled from 'styled-components';
 import AddFee from './feeRelated/AddFee';
 import ShowAllFees from './feeRelated/ShowAllFees';
 import ViewStudentFee from './feeRelated/ViewStudentFee';
-import ShowAllDocuments from './documentRelated/ShowAllDocuments';
 import AllStudentMarks from './studentRelated/AllStudentMarks';
 import ClassAttendance from './studentRelated/ClassAttendance';
 import ShowSalary from './salaryRelated/ShowSalary';
+import AddSalary from './salaryRelated/AddSalary';
 import AddRoutine from './routineRelated/AddRoutine';
 import ShowRoutines from './routineRelated/ShowRoutines';
 import AdminExamRoutine from './examRoutineRelated/AdminExamRoutine';
+import AdminNotes from './notesRelated/AdminNotes';
 
 // Staff imports
 import AddStaff from './staffRelated/AddStaff';
@@ -168,8 +169,8 @@ const AdminDashboard = () => {
                     <Route path="/Admin/fees" element={<ShowAllFees />} />
                     <Route path="/Admin/students/student/fee/:id" element={<ViewStudentFee />} />
 
-                    {/* Document */}
-                    <Route path="/Admin/documents" element={<ShowAllDocuments />} />
+                    {/* Notes */}
+                    <Route path="/Admin/notes" element={<AdminNotes />} />
 
                     {/* Marks */}
                     <Route path="/Admin/allmarks" element={<AllStudentMarks />} />
@@ -179,6 +180,7 @@ const AdminDashboard = () => {
 
                     {/* Salary */}
                     <Route path="/Admin/salary" element={<ShowSalary />} />
+                    <Route path="/Admin/salary/add" element={<AddSalary />} />
 
                     {/* Routines */}
                     <Route path="/Admin/routines" element={<ShowRoutines />} />
@@ -219,8 +221,8 @@ const DrawerStyled = styled(Drawer)`
 
 const ToolbarStyled = styled(Toolbar)`
     display: flex;
-    align-items: center;
-    justify-content: flex-end;
+    alignItems: center;
+    justifyContent: flex-end;
 `;
 
 const MainContent = styled(Box)`
@@ -229,5 +231,5 @@ const MainContent = styled(Box)`
     overflow-y: auto;
     padding: 24px;
     background: #f0f2f5;
- `;
+`;
 

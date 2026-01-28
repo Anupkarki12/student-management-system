@@ -20,7 +20,9 @@ const TeacherNotes = () => {
     
     const [notesList, setNotesList] = useState([]);
     const [classes, setClasses] = useState([]);
+    const [subjects, setSubjects] = useState([]);
     const [selectedClass, setSelectedClass] = useState('');
+    const [selectedSubject, setSelectedSubject] = useState('');
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState({ type: '', text: '' });
     const [openDialog, setOpenDialog] = useState(false);
@@ -28,7 +30,8 @@ const TeacherNotes = () => {
     const [newNote, setNewNote] = useState({
         title: '',
         description: '',
-        sclassID: ''
+        sclassID: '',
+        subjectID: ''
     });
     const [saving, setSaving] = useState(false);
 
@@ -47,6 +50,12 @@ const TeacherNotes = () => {
         }
     }, [teacherId]);
 
+    useEffect(() => {
+        if (newNote.sclassID) {
+            fetchSubjects(newNote.sclassID);
+        }
+    }, [newNote.sclassID]);
+
     const fetchTeacherClasses = async () => {
         setLoading(true);
         try {
@@ -60,6 +69,20 @@ const TeacherNotes = () => {
             console.error('Error fetching classes:', error);
         }
         setLoading(false);
+    };
+
+    const fetchSubjects = async (classId) => {
+        try {
+            const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/ClassSubjects/${classId}`);
+            if (result.data && Array.isArray(result.data)) {
+                setSubjects(result.data);
+            } else {
+                setSubjects([]);
+            }
+        } catch (error) {
+            console.error('Error fetching subjects:', error);
+            setSubjects([]);
+        }
     };
 
     const fetchNotes = async () => {
@@ -101,6 +124,7 @@ const TeacherNotes = () => {
             formData.append('teacherID', teacherId);
             formData.append('schoolID', schoolId);
             formData.append('sclassID', newNote.sclassID);
+            formData.append('subjectID', newNote.subjectID || '');
             formData.append('file', selectedFile);
 
             await axios.post(`${process.env.REACT_APP_BASE_URL}/TeacherNoteCreate`, formData, {
@@ -109,7 +133,8 @@ const TeacherNotes = () => {
             
             setMessage({ type: 'success', text: 'Note uploaded successfully!' });
             setOpenDialog(false);
-            setNewNote({ title: '', description: '', sclassID: selectedClass });
+            setNewNote({ title: '', description: '', sclassID: selectedClass, subjectID: '' });
+            setSelectedSubject('');
             setSelectedFile(null);
             fetchNotes();
         } catch (error) {
@@ -142,11 +167,9 @@ const TeacherNotes = () => {
     };
 
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        const date = new Date(dateString);
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        return date.toLocaleDateString('en-US', options);
     };
 
     const formatFileSize = (bytes) => {
@@ -235,13 +258,14 @@ const TeacherNotes = () => {
                         <Table>
                             <TableHead>
                                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                                    <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>File</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', width: '25%' }}>Title</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>Description</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>Class</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>Size</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', width: '8%' }}>File</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', width: '20%' }}>Title</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', width: '18%' }}>Description</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>Class</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', width: '12%' }}>Subject</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', width: '8%' }}>Size</TableCell>
                                     <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>Uploaded</TableCell>
-                                    <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>Actions</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', width: '14%' }}>Actions</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -259,7 +283,7 @@ const TeacherNotes = () => {
                                             </Typography>
                                         </TableCell>
                                         <TableCell>
-                                            <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            <Typography variant="body2" sx={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 {note.description}
                                             </Typography>
                                         </TableCell>
@@ -268,6 +292,14 @@ const TeacherNotes = () => {
                                                 label={`Class ${getClassName(note)}`}
                                                 size="small"
                                                 color="primary"
+                                                variant="outlined"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip 
+                                                label={note.subject?.subName || 'General'}
+                                                size="small"
+                                                color="secondary"
                                                 variant="outlined"
                                             />
                                         </TableCell>
@@ -314,11 +346,28 @@ const TeacherNotes = () => {
                             <Select
                                 value={newNote.sclassID}
                                 label="Class *"
-                                onChange={(e) => setNewNote({ ...newNote, sclassID: e.target.value })}
+                                onChange={(e) => setNewNote({ ...newNote, sclassID: e.target.value, subjectID: '' })}
                             >
                                 {classes.map((cls) => (
                                     <MenuItem key={cls._id} value={cls._id}>
                                         {cls.sclassName}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth sx={{ mb: 2 }}>
+                            <InputLabel>Subject</InputLabel>
+                            <Select
+                                value={newNote.subjectID}
+                                label="Subject"
+                                onChange={(e) => setNewNote({ ...newNote, subjectID: e.target.value })}
+                            >
+                                <MenuItem value="">
+                                    <em>General (No Subject)</em>
+                                </MenuItem>
+                                {subjects.map((sub) => (
+                                    <MenuItem key={sub._id} value={sub._id}>
+                                        {sub.subName}
                                     </MenuItem>
                                 ))}
                             </Select>

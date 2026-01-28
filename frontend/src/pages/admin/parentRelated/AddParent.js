@@ -60,6 +60,7 @@ const AddParent = () => {
     const [showPopup, setShowPopup] = useState(false);
     const [message, setMessage] = useState("");
     const [loader, setLoader] = useState(false);
+    const [isSubmitted, setIsSubmitted] = useState(false);
 
     const school = currentUser._id;
     const role = "Parent";
@@ -81,6 +82,11 @@ const AddParent = () => {
         };
         fetchStudents();
     }, [school]);
+
+    // Reset status when component mounts
+    useEffect(() => {
+        dispatch(underControl());
+    }, [dispatch]);
 
     const handlePhotoChange = (event) => {
         const file = event.target.files[0];
@@ -124,32 +130,33 @@ const AddParent = () => {
             return;
         }
         
-        if (selectedStudents.length === 0) {
-            setMessage("Please select at least one student");
-            setShowPopup(true);
-            return;
-        }
+        // Student selection is now optional - parent can be added first, students linked later
+        // Removed the validation that required at least one student
         
         setLoader(true);
+        setIsSubmitted(true);
         dispatch(registerParent(fields, role));
     };
 
     useEffect(() => {
-        if (status === 'added') {
+        if (isSubmitted && status === 'added') {
             dispatch(underControl());
+            setIsSubmitted(false);
             navigate("/Admin/parents");
         }
         else if (status === 'failed') {
             setMessage(response || "Failed to add parent");
             setShowPopup(true);
             setLoader(false);
+            setIsSubmitted(false);
         }
         else if (status === 'error') {
             setMessage("Network Error");
             setShowPopup(true);
             setLoader(false);
+            setIsSubmitted(false);
         }
-    }, [status, navigate, error, response, dispatch]);
+    }, [status, isSubmitted, navigate, error, response, dispatch]);
 
     // Section Title Component
     const SectionTitle = ({ title }) => (

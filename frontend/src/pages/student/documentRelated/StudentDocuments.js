@@ -72,9 +72,9 @@ const StudentDocuments = () => {
     };
 
     const getFileIcon = (fileType) => {
-        if (fileType.includes('pdf')) return '📄';
-        if (fileType.includes('word') || fileType.includes('document')) return '📝';
-        if (fileType.includes('powerpoint') || fileType.includes('presentation')) return '📊';
+        if (fileType && fileType.includes('pdf')) return '📄';
+        if (fileType && (fileType.includes('word') || fileType.includes('document'))) return '📝';
+        if (fileType && (fileType.includes('powerpoint') || fileType.includes('presentation'))) return '📊';
         return '📎';
     };
 
@@ -86,19 +86,19 @@ const StudentDocuments = () => {
 
             {loading ? (
                 <Typography>Loading...</Typography>
-            ) : response ? (
+            ) : error ? (
+                <Paper sx={{ p: 3, textAlign: 'center', bgcolor: '#ffebee' }}>
+                    <Typography color="error">
+                        Error loading documents: {error}
+                    </Typography>
+                </Paper>
+            ) : Array.isArray(documentsList) && documentsList.length === 0 ? (
                 <Paper sx={{ p: 4, textAlign: 'center' }}>
                     <Typography variant="h6" color="textSecondary">
                         No Documents Available
                     </Typography>
                     <Typography color="textSecondary" sx={{ mt: 1 }}>
                         Your teachers haven't uploaded any documents yet
-                    </Typography>
-                </Paper>
-            ) : error ? (
-                <Paper sx={{ p: 3, textAlign: 'center', bgcolor: '#ffebee' }}>
-                    <Typography color="error">
-                        Error loading documents: {error}
                     </Typography>
                 </Paper>
             ) : (
@@ -117,81 +117,71 @@ const StudentDocuments = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {Array.isArray(documentsList) && documentsList.length > 0 ? (
-                                documentsList.map((doc) => (
-                                    <TableRow key={doc._id} hover>
-                                        <TableCell>
-                                            <Typography variant="h5">
-                                                {getFileIcon(doc.fileType)}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body1" fontWeight="medium">
-                                                {doc.title}
-                                            </Typography>
-                                            <Typography variant="caption" color="textSecondary">
-                                                {doc.fileName}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {doc.description || '-'}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            {doc.teacher ? (
-                                                <Typography variant="body2">
-                                                    {doc.teacher.name}
-                                                </Typography>
-                                            ) : (
-                                                <Typography variant="body2" color="textSecondary">
-                                                    -
-                                                </Typography>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            {doc.subject ? (
-                                                <Typography variant="body2">
-                                                    {doc.subject.subName}
-                                                </Typography>
-                                            ) : (
-                                                <Typography variant="body2" color="textSecondary">
-                                                    General
-                                                </Typography>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2">
-                                                {formatFileSize(doc.fileSize)}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2">
-                                                {formatDate(doc.uploadDate)}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button
-                                                variant="contained"
-                                                color="primary"
-                                                size="small"
-                                                startIcon={<DownloadIcon />}
-                                                onClick={() => handleDownload(doc)}
-                                            >
-                                                Download
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={8} align="center">
-                                        <Typography variant="body1" color="textSecondary">
-                                            No documents found
+                            {documentsList.map((doc) => (
+                                <TableRow key={doc._id} hover>
+                                    <TableCell>
+                                        <Typography variant="h5">
+                                            {getFileIcon(doc.fileType)}
                                         </Typography>
                                     </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body1" fontWeight="medium">
+                                            {doc.title}
+                                        </Typography>
+                                        <Typography variant="caption" color="textSecondary">
+                                            {doc.fileName}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {doc.description || '-'}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        {doc.teacher ? (
+                                            <Typography variant="body2">
+                                                {doc.teacher.name}
+                                            </Typography>
+                                        ) : (
+                                            <Typography variant="body2" color="textSecondary">
+                                                -
+                                            </Typography>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        {doc.subject ? (
+                                            <Typography variant="body2">
+                                                {doc.subject.subName}
+                                            </Typography>
+                                        ) : (
+                                            <Typography variant="body2" color="textSecondary">
+                                                General
+                                            </Typography>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2">
+                                            {formatFileSize(doc.fileSize)}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2">
+                                            {formatDate(doc.uploadDate)}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            size="small"
+                                            startIcon={<DownloadIcon />}
+                                            onClick={() => handleDownload(doc)}
+                                        >
+                                            Download
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
-                            )}
+                            ))}
                         </TableBody>
                     </Table>
                 </TableContainer>

@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { getAllStaffs, deleteStaff } from '../../../redux/staffRelated/staffHandle';
+import { getAllSimpleStaffs, deleteSimpleStaff, deleteAllSimpleStaffs } from '../../../redux/staffRelated/staffHandle';
 import { StyledTableCell, StyledTableRow } from '../../../components/styles';
-import { BlueButton, GreenButton } from '../../../components/buttonStyles';
+import { GreenButton } from '../../../components/buttonStyles';
 import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
 import { Paper, Table, TableBody, TableContainer, TableHead, TablePagination, TableRow, Box, IconButton, Avatar, Typography } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import SpeedDialTemplate from '../../../components/SpeedDialTemplate';
 import Popup from '../../../components/Popup';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
+import AddIcon from '@mui/icons-material/Add';
 
 const ShowStaff = () => {
     const [page, setPage] = useState(0);
@@ -21,7 +22,7 @@ const ShowStaff = () => {
     const { currentUser } = useSelector((state) => state.user);
 
     useEffect(() => {
-        dispatch(getAllStaffs(currentUser._id));
+        dispatch(getAllSimpleStaffs(currentUser._id));
     }, [currentUser._id, dispatch]);
 
     const [showPopup, setShowPopup] = useState(false);
@@ -37,43 +38,51 @@ const ShowStaff = () => {
 
     const deleteHandler = (deleteID, address) => {
         dispatch({ type: 'staff/getDeleteSuccess', payload: null });
-        dispatch(deleteStaff(deleteID, address)).then(() => {
+        dispatch(deleteSimpleStaff(deleteID)).then(() => {
             dispatch({ type: 'staff/getSuccess', payload: [] });
-            dispatch(getAllStaffs(currentUser._id));
+            dispatch(getAllSimpleStaffs(currentUser._id));
+        });
+    };
+
+    const deleteAllHandler = () => {
+        dispatch({ type: 'staff/getDeleteSuccess', payload: null });
+        dispatch(deleteAllSimpleStaffs(currentUser._id)).then(() => {
+            dispatch({ type: 'staff/getSuccess', payload: [] });
+            dispatch(getAllSimpleStaffs(currentUser._id));
         });
     };
 
     const columns = [
         { id: 'photo', label: 'Photo', minWidth: 80 },
-        { id: 'name', label: 'Name', minWidth: 170 },
+        { id: 'id', label: 'ID', minWidth: 100 },
+        { id: 'name', label: 'Name', minWidth: 150 },
+        { id: 'address', label: 'Address', minWidth: 150 },
         { id: 'position', label: 'Position', minWidth: 120 },
-        { id: 'department', label: 'Department', minWidth: 120 },
-        { id: 'email', label: 'Email', minWidth: 180 },
-        { id: 'phone', label: 'Phone', minWidth: 120 },
+        { id: 'phone', label: 'Phone Number', minWidth: 120 },
     ];
 
-    const rows = staffList.map((staff) => {
+    const rows = Array.isArray(staffList) ? staffList.map((staff) => {
         return {
             photo: staff.photo,
+            id: staff._id ? staff._id.substring(0, 8) : '-',
             name: staff.name,
+            address: staff.address || '-',
             position: staff.position,
-            department: staff.department || '-',
-            email: staff.email,
             phone: staff.phone || '-',
-            id: staff._id,
+            fullId: staff._id,
         };
-    });
+    }) : [];
 
     const actions = [
         {
-            icon: <PersonAddAlt1Icon color="primary" />,
+            icon: <AddIcon color="primary" />,
             name: 'Add New Staff',
             action: () => navigate("/Admin/addstaff")
         },
         {
             icon: <PersonRemoveIcon color="error" />,
             name: 'Delete All Staff',
-            action: () => deleteHandler(currentUser._id, "Staffs")
+            action: () => deleteAllHandler()
         },
     ];
 
@@ -94,18 +103,28 @@ const ShowStaff = () => {
 
     return (
         <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-            {response ? (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', p: 2 }}>
+            {response === "No staff found" || !Array.isArray(staffList) || staffList.length === 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 3 }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: 'text.secondary' }}>
+                        No Staff Found
+                    </Typography>
                     <GreenButton variant="contained" onClick={() => navigate("/Admin/addstaff")}>
-                        Add Staff
+                        Add New Staff
                     </GreenButton>
                 </Box>
             ) : (
                 <>
-                    <Box sx={{ p: 2 }}>
-                        <Typography variant="h6" component="div" sx={{ mb: 2 }}>
-                            Staff Management
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
+                        <Typography variant="h6" component="div">
+                            Staff List
                         </Typography>
+                        <GreenButton 
+                            variant="contained" 
+                            startIcon={<AddIcon />}
+                            onClick={() => navigate("/Admin/addstaff")}
+                        >
+                            Add New Staff
+                        </GreenButton>
                     </Box>
                     <TableContainer>
                         <Table stickyHeader aria-label="sticky table">
@@ -130,9 +149,10 @@ const ShowStaff = () => {
                                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                                     .map((row) => {
                                         return (
-                                            <StyledTableRow hover role="checkbox" tabIndex={-1} key={row.id}>
+                                            <StyledTableRow hover role="checkbox" tabIndex={-1} key={row.fullId}>
                                                 <PhotoCell photo={row.photo} />
                                                 {columns.map((column) => {
+                                                    if (column.id === 'photo') return null;
                                                     const value = row[column.id];
                                                     return (
                                                         <StyledTableCell key={column.id} align={column.align}>
@@ -141,13 +161,17 @@ const ShowStaff = () => {
                                                     );
                                                 })}
                                                 <StyledTableCell align="center">
-                                                    <IconButton onClick={() => deleteHandler(row.id, "Staff")}>
+                                                    <IconButton onClick={() => deleteHandler(row.fullId, "Staff")}>
                                                         <PersonRemoveIcon color="error" />
                                                     </IconButton>
-                                                    <BlueButton variant="contained"
-                                                        onClick={() => navigate("/Admin/staff/" + row.id)}>
+                                                    <GreenButton 
+                                                        variant="contained" 
+                                                        size="small"
+                                                        sx={{ ml: 1 }}
+                                                        onClick={() => navigate("/Admin/staff/" + row.fullId)}
+                                                    >
                                                         View
-                                                    </BlueButton>
+                                                    </GreenButton>
                                                 </StyledTableCell>
                                             </StyledTableRow>
                                         );

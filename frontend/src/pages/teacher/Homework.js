@@ -20,7 +20,9 @@ const Homework = () => {
     
     const [homeworkList, setHomeworkList] = useState([]);
     const [classes, setClasses] = useState([]);
+    const [subjects, setSubjects] = useState([]);
     const [selectedClass, setSelectedClass] = useState('');
+    const [selectedSubject, setSelectedSubject] = useState('');
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState({ type: '', text: '' });
     const [openDialog, setOpenDialog] = useState(false);
@@ -28,7 +30,8 @@ const Homework = () => {
         title: '',
         description: '',
         dueDate: '',
-        sclassID: ''
+        sclassID: '',
+        subjectID: ''
     });
     const [saving, setSaving] = useState(false);
 
@@ -46,6 +49,12 @@ const Homework = () => {
             fetchHomework();
         }
     }, [teacherId]);
+
+    useEffect(() => {
+        if (teacherId && selectedClass) {
+            fetchSubjects(teacherId, selectedClass);
+        }
+    }, [selectedClass]);
 
     const fetchTeacherClasses = async () => {
         setLoading(true);
@@ -78,6 +87,20 @@ const Homework = () => {
         setLoading(false);
     };
 
+    const fetchSubjects = async (teacherId, classId) => {
+        try {
+            const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Teacher/Subjects/${teacherId}/${classId}`);
+            if (result.data && Array.isArray(result.data)) {
+                setSubjects(result.data);
+            } else {
+                setSubjects([]);
+            }
+        } catch (error) {
+            console.error('Error fetching subjects:', error);
+            setSubjects([]);
+        }
+    };
+
     const handleCreateHomework = async () => {
         if (!newHomework.title || !newHomework.description || !newHomework.dueDate || !newHomework.sclassID) {
             setMessage({ type: 'error', text: 'Please fill all required fields' });
@@ -94,13 +117,14 @@ const Homework = () => {
                 dueDate: newHomework.dueDate,
                 teacherID: teacherId,
                 schoolID: schoolId,
-                sclassID: newHomework.sclassID
+                sclassID: newHomework.sclassID,
+                subjectID: newHomework.subjectID || null
             };
 
             await axios.post(`${process.env.REACT_APP_BASE_URL}/HomeworkCreate`, formData);
             setMessage({ type: 'success', text: 'Homework created successfully!' });
             setOpenDialog(false);
-            setNewHomework({ title: '', description: '', dueDate: '', sclassID: selectedClass });
+            setNewHomework({ title: '', description: '', dueDate: '', sclassID: selectedClass, subjectID: '' });
             fetchHomework();
         } catch (error) {
             console.error('Error creating homework:', error);
@@ -208,6 +232,7 @@ const Homework = () => {
                                     <TableCell sx={{ fontWeight: 'bold' }}>Title</TableCell>
                                     <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
                                     <TableCell sx={{ fontWeight: 'bold' }}>Class</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>Subject</TableCell>
                                     <TableCell sx={{ fontWeight: 'bold' }}>Due Date</TableCell>
                                     <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                                     <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
@@ -231,6 +256,14 @@ const Homework = () => {
                                                 label={`Class ${getClassName(hw)}`}
                                                 size="small"
                                                 color="primary"
+                                                variant="outlined"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Chip 
+                                                label={hw.subject?.subName || 'General'}
+                                                size="small"
+                                                color="secondary"
                                                 variant="outlined"
                                             />
                                         </TableCell>
@@ -272,11 +305,28 @@ const Homework = () => {
                             <Select
                                 value={newHomework.sclassID}
                                 label="Class *"
-                                onChange={(e) => setNewHomework({ ...newHomework, sclassID: e.target.value })}
+                                onChange={(e) => {
+                                    setNewHomework({ ...newHomework, sclassID: e.target.value, subjectID: '' });
+                                }}
                             >
                                 {classes.map((cls) => (
                                     <MenuItem key={cls._id} value={cls._id}>
                                         {cls.sclassName}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth sx={{ mb: 2 }}>
+                            <InputLabel>Subject</InputLabel>
+                            <Select
+                                value={newHomework.subjectID}
+                                label="Subject"
+                                onChange={(e) => setNewHomework({ ...newHomework, subjectID: e.target.value })}
+                            >
+                                <MenuItem value="">General (No Subject)</MenuItem>
+                                {subjects.map((sub) => (
+                                    <MenuItem key={sub._id} value={sub._id}>
+                                        {sub.subName}
                                     </MenuItem>
                                 ))}
                             </Select>

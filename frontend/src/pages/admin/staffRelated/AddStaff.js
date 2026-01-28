@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { registerStaff } from '../../../redux/staffRelated/staffHandle';
+import { addSimpleStaff } from '../../../redux/staffRelated/staffHandle';
 import Popup from '../../../components/Popup';
 import { underControl } from '../../../redux/staffRelated/staffSlice';
-import { CircularProgress, Box, Typography, Button, TextField, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
+import { CircularProgress, Box, Typography, TextField, MenuItem, Select, FormControl, InputLabel, Button, Paper } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const AddStaff = () => {
     const dispatch = useDispatch();
@@ -14,12 +15,9 @@ const AddStaff = () => {
     const { status, response, error } = useSelector(state => state.staff);
 
     const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [position, setPosition] = useState('');
-    const [department, setDepartment] = useState('');
-    const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
+    const [position, setPosition] = useState('');
+    const [phone, setPhone] = useState('');
     const [photo, setPhoto] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
 
@@ -29,7 +27,6 @@ const AddStaff = () => {
 
     const { currentUser } = useSelector(state => state.user);
     const school = currentUser._id;
-    const role = "Staff";
 
     const positions = [
         'Administration',
@@ -62,17 +59,40 @@ const AddStaff = () => {
     };
 
     const fields = photo 
-        ? { name, email, password, role, school, position, department, phone, address, photo }
-        : { name, email, password, role, school, position, department, phone, address };
+        ? { name, address, position, phone, photo }
+        : { name, address, position, phone };
 
     const submitHandler = (event) => {
         event.preventDefault();
-        setLoader(true);
-        dispatch(registerStaff(fields, role));
+        
+        // Force close any open MUI Select dropdowns and remove focus
+        // This prevents the aria-hidden accessibility issue
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement.blur) {
+            activeElement.blur();
+        }
+        
+        // Close any open MUI Select menus
+        document.body.click();
+        
+        // Use setTimeout to ensure the DOM has updated and MUI Select is closed
+        setTimeout(() => {
+            setLoader(true);
+            dispatch(addSimpleStaff(fields, school));
+        }, 100);
     };
 
     useEffect(() => {
         if (status === 'added') {
+            // Reset form fields before navigating
+            setName('');
+            setAddress('');
+            setPosition('');
+            setPhone('');
+            setPhoto(null);
+            setPhotoPreview(null);
+            setLoader(false);
+            
             dispatch(underControl());
             navigate("/Admin/staff");
         }
@@ -89,36 +109,48 @@ const AddStaff = () => {
     }, [status, navigate, error, response, dispatch]);
 
     return (
-        <div>
-            <div className="register">
-                <form className="registerForm" onSubmit={submitHandler}>
-                    <span className="registerTitle">Add Staff</span>
+        <Box sx={{ p: 3 }}>
+            <Button 
+                startIcon={<ArrowBackIcon />} 
+                onClick={() => navigate("/Admin/staff")}
+                sx={{ mb: 2 }}
+            >
+                Back to Staff List
+            </Button>
 
-                    <label>Name</label>
-                    <input className="registerInput" type="text" placeholder="Enter staff name..."
+            <Paper sx={{ maxWidth: 600, mx: 'auto', p: 3 }}>
+                <Typography variant="h5" component="h1" sx={{ mb: 3, textAlign: 'center' }}>
+                    Add New Staff
+                </Typography>
+
+                <form onSubmit={submitHandler}>
+                    <TextField
+                        fullWidth
+                        label="Full Name"
                         value={name}
                         onChange={(event) => setName(event.target.value)}
-                        autoComplete="name" required />
+                        required
+                        sx={{ mb: 2 }}
+                        placeholder="Enter staff name"
+                    />
 
-                    <label>Email</label>
-                    <input className="registerInput" type="email" placeholder="Enter staff email..."
-                        value={email}
-                        onChange={(event) => setEmail(event.target.value)}
-                        autoComplete="email" required />
+                    <TextField
+                        fullWidth
+                        label="Address"
+                        value={address}
+                        onChange={(event) => setAddress(event.target.value)}
+                        multiline
+                        rows={2}
+                        sx={{ mb: 2 }}
+                        placeholder="Enter address"
+                    />
 
-                    <label>Password</label>
-                    <input className="registerInput" type="password" placeholder="Enter staff password..."
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        autoComplete="new-password" required />
-
-                    <FormControl fullWidth sx={{ mb: 2 }}>
+                    <FormControl fullWidth sx={{ mb: 2 }} required>
                         <InputLabel>Position</InputLabel>
                         <Select
                             value={position}
                             label="Position"
                             onChange={(event) => setPosition(event.target.value)}
-                            required
                         >
                             {positions.map((pos) => (
                                 <MenuItem key={pos} value={pos}>{pos}</MenuItem>
@@ -128,37 +160,23 @@ const AddStaff = () => {
 
                     <TextField
                         fullWidth
-                        label="Department (Optional)"
-                        value={department}
-                        onChange={(event) => setDepartment(event.target.value)}
-                        sx={{ mb: 2 }}
-                    />
-
-                    <TextField
-                        fullWidth
                         label="Phone Number"
                         value={phone}
                         onChange={(event) => setPhone(event.target.value)}
                         sx={{ mb: 2 }}
+                        placeholder="Enter phone number"
                     />
 
-                    <TextField
-                        fullWidth
-                        label="Address"
-                        value={address}
-                        onChange={(event) => setAddress(event.target.value)}
-                        sx={{ mb: 2 }}
-                    />
-
-                    {/* Photo Upload Section */}
-                    <label>Staff Photo (Optional)</label>
-                    <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                        Staff Photo (Optional)
+                    </Typography>
+                    <Box sx={{ mb: 3 }}>
                         {!photoPreview ? (
                             <Box
                                 sx={{
                                     border: '2px dashed #ccc',
-                                    borderRadius: 1,
-                                    p: 3,
+                                    borderRadius: 2,
+                                    p: 4,
                                     textAlign: 'center',
                                     cursor: 'pointer',
                                     '&:hover': {
@@ -177,32 +195,44 @@ const AddStaff = () => {
                                 </Typography>
                             </Box>
                         ) : (
-                            <Box sx={{ position: 'relative', display: 'inline-block' }}>
-                                <img 
-                                    src={photoPreview} 
-                                    alt="Staff preview" 
-                                    style={{ 
-                                        width: 150, 
-                                        height: 150, 
-                                        objectFit: 'cover',
-                                        borderRadius: 8,
-                                        border: '2px solid #ddd'
-                                    }} 
-                                />
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                                    <img 
+                                        src={photoPreview} 
+                                        alt="Staff preview" 
+                                        style={{ 
+                                            width: 150, 
+                                            height: 150, 
+                                            objectFit: 'cover',
+                                            borderRadius: 8,
+                                            border: '2px solid #ddd'
+                                        }} 
+                                    />
+                                    <Button
+                                        variant="contained"
+                                        color="error"
+                                        size="small"
+                                        onClick={removePhoto}
+                                        sx={{ 
+                                            position: 'absolute',
+                                            top: -10,
+                                            right: -10,
+                                            minWidth: 'auto',
+                                            p: 0.5,
+                                            borderRadius: '50%'
+                                        }}
+                                    >
+                                        X
+                                    </Button>
+                                </Box>
                                 <Button
-                                    variant="contained"
-                                    color="error"
+                                    variant="outlined"
+                                    color="primary"
                                     size="small"
-                                    onClick={removePhoto}
-                                    sx={{ 
-                                        position: 'absolute',
-                                        top: -10,
-                                        right: -10,
-                                        minWidth: 'auto',
-                                        p: 0.5
-                                    }}
+                                    onClick={() => document.getElementById('staff-photo-upload').click()}
+                                    sx={{ mt: 1 }}
                                 >
-                                    ×
+                                    Change Photo
                                 </Button>
                             </Box>
                         )}
@@ -215,17 +245,30 @@ const AddStaff = () => {
                         />
                     </Box>
 
-                    <button className="registerButton" type="submit" disabled={loader}>
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        fullWidth
+                        size="large"
+                        disabled={loader}
+                        sx={{ 
+                            py: 1.5,
+                            backgroundColor: '#7f56da',
+                            '&:hover': {
+                                backgroundColor: '#6b45c8'
+                            }
+                        }}
+                    >
                         {loader ? (
                             <CircularProgress size={24} color="inherit" />
                         ) : (
-                            'Register'
+                            'Add Staff'
                         )}
-                    </button>
+                    </Button>
                 </form>
-            </div>
+            </Paper>
             <Popup message={message} setShowPopup={setShowPopup} showPopup={showPopup} />
-        </div>
+        </Box>
     );
 };
 

@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { Divider, ListItemButton, ListItemIcon, ListItemText, ListSubheader } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
@@ -9,7 +8,6 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import NotesIcon from '@mui/icons-material/Notes';
 import GradeIcon from '@mui/icons-material/Grade';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import DescriptionIcon from '@mui/icons-material/Description';
 import ClassIcon from '@mui/icons-material/Class';
 import QuizIcon from '@mui/icons-material/Quiz';
 import { useSelector } from 'react-redux';
@@ -71,13 +69,6 @@ const TeacherSideBar = () => {
                         <GradeIcon color={isActive("/Teacher/marks") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Marks" />
-                </ListItemButton>
-                
-                <ListItemButton component={Link} to="/Teacher/documents">
-                    <ListItemIcon>
-                        <DescriptionIcon color={isActive("/Teacher/documents") ? 'primary' : 'inherit'} />
-                    </ListItemIcon>
-                    <ListItemText primary="Documents" />
                 </ListItemButton>
             </React.Fragment>
 
