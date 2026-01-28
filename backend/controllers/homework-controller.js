@@ -79,12 +79,30 @@ const getHomeworkByClass = async (req, res) => {
 const getHomeworkForClass = async (req, res) => {
     try {
         const { classId } = req.params;
+        
+        console.log('=== GET HOMEWORK FOR CLASS ===');
+        console.log('classId:', classId);
+        
+        // Validate classId
+        if (!classId) {
+            console.log('No classId provided');
+            return res.status(400).json({ message: "Class ID is required" });
+        }
+        
+        // Check if classId is a valid MongoDB ObjectId
+        if (classId.length !== 24) {
+            console.log('Invalid classId format:', classId);
+            return res.status(400).json({ message: "Invalid class ID format" });
+        }
+
         const homework = await Homework.find({ sclass: classId })
             .populate('sclass', 'sclassName')
             .populate('subject', 'subName')
             .populate('teacher', 'name')
             .sort({ dueDate: -1 }); // Most recent first
 
+        console.log('Homework found:', homework.length, 'items');
+        
         if (homework.length > 0) {
             res.send(homework);
         } else {
@@ -92,7 +110,60 @@ const getHomeworkForClass = async (req, res) => {
         }
     } catch (err) {
         console.error('Error fetching homework for class:', err);
-        res.status(500).json({ message: err.message });
+        console.error('Error stack:', err.stack);
+        res.status(500).json({ message: err.message || "Internal server error" });
+    }
+};
+
+// Get homework for a specific student (for parents)
+const getHomeworkForStudent = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        
+        console.log('=== GET HOMEWORK FOR STUDENT ===');
+        console.log('studentId:', studentId);
+        
+        // Validate studentId
+        if (!studentId) {
+            console.log('No studentId provided');
+            return res.status(400).json({ message: "Student ID is required" });
+        }
+        
+        // Check if studentId is a valid MongoDB ObjectId
+        if (studentId.length !== 24) {
+            console.log('Invalid studentId format:', studentId);
+            return res.status(400).json({ message: "Invalid student ID format" });
+        }
+
+        // Import Student model to get class ID
+        const Student = require('../models/studentSchema.js');
+        const student = await Student.findById(studentId).populate('sclassName', 'sclassName');
+        
+        if (!student) {
+            console.log('Student not found');
+            return res.status(404).json({ message: "Student not found" });
+        }
+
+        console.log('Student class:', student.sclassName);
+
+        // Find homework for the student's class
+        const homework = await Homework.find({ sclass: student.sclassName._id })
+            .populate('sclass', 'sclassName')
+            .populate('subject', 'subName')
+            .populate('teacher', 'name')
+            .sort({ dueDate: -1 }); // Most recent first
+
+        console.log('Homework found:', homework.length, 'items');
+        
+        if (homework.length > 0) {
+            res.send(homework);
+        } else {
+            res.send({ message: "No homework found for this student" });
+        }
+    } catch (err) {
+        console.error('Error fetching homework for student:', err);
+        console.error('Error stack:', err.stack);
+        res.status(500).json({ message: err.message || "Internal server error" });
     }
 };
 
@@ -111,5 +182,5 @@ const deleteHomework = async (req, res) => {
     }
 };
 
-module.exports = { createHomework, getHomework, getHomeworkByClass, getHomeworkForClass, deleteHomework };
+module.exports = { createHomework, getHomework, getHomeworkByClass, getHomeworkForClass, getHomeworkForStudent, deleteHomework };
 

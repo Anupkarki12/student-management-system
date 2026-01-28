@@ -294,11 +294,8 @@ const getStudentDocuments = async (req, res) => {
             console.log('First document sclass:', documents[0].sclass);
         }
         
-        if (documents.length > 0) {
-            res.send(documents);
-        } else {
-            res.send({ message: "No documents found" });
-        }
+        // Return empty array instead of message object for better frontend handling
+        res.send(documents);
     } catch (err) {
         console.error('Error fetching student documents:', err);
         res.status(500).json({ message: err.message });

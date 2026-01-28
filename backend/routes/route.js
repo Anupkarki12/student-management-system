@@ -24,12 +24,12 @@ const { subjectCreate, classSubjects, deleteSubjectsByClass, getSubjectDetail, d
 const { teacherRegister, teacherLogIn, teacherForgotPassword, getTeachers, getTeacherDetail, deleteTeachers, deleteTeachersByClass, deleteTeacher, updateTeacherSubject, teacherAttendance } = require('../controllers/teacher-controller.js');
 const { createFee, getStudentFees, getAllStudentFees, updateFee, deleteFee } = require('../controllers/fee-controller.js');
 const { documentCreate, documentList, getTeacherDocuments, getSchoolDocuments, getStudentDocuments, deleteDocument, deleteDocuments } = require('../controllers/document-controller.js');
-const { createHomework, getHomework, getHomeworkByClass, getHomeworkForClass, deleteHomework } = require('../controllers/homework-controller.js');
-const { createTeacherNote, getTeacherNotes, deleteTeacherNote } = require('../controllers/teacherNote-controller.js');
+const { createHomework, getHomework, getHomeworkByClass, getHomeworkForClass, getHomeworkForStudent, deleteHomework } = require('../controllers/homework-controller.js');
+const { createTeacherNote, getTeacherNotes, getSchoolNotes, getNotesByClass, deleteTeacherNote } = require('../controllers/teacherNote-controller.js');
 const { createMarks, getMarks, getStudentMarks, getClassMarks, deleteMarks, getAllMarksForSchool, bulkCreateMarks } = require('../controllers/marks-controller.js');
 const { assignTeacherToClass, getTeacherAssignments, getClassAssignments, getAvailableTeachersForClass, deleteAssignment, getTeacherClasses, getTeacherSubjectsByClass, getTeacherDetailsWithAssignments } = require('../controllers/teacherClassAssignment-controller.js');
 const { createRoutine, getRoutinesBySchool, getRoutineByClass, getRoutineById, deleteRoutine, getClassRoutine, getExamRoutine, createExamRoutine, getExamRoutinesBySchool, getTeacherExamRoutines, getStudentExamRoutines, deleteExamRoutine, fixExamRoutinePaths } = require('../controllers/routine-controller.js');
-const { createSalary, getSalariesBySchool, getSalaryByEmployee, calculateNetSalary, recordPayment, getPaymentHistory, deleteSalary, getSalarySummary } = require('../controllers/salary-controller.js');
+const salaryController = require('../controllers/salary-controller.js');
 const staffController = require('../controllers/staff-controller.js');
 const parentController = require('../controllers/parent-controller.js');
 
@@ -227,6 +227,7 @@ router.post('/HomeworkCreate', createHomework);
 router.get('/Homework/:teacherId', getHomework);
 router.get('/Homework/Class/:sclassId/:teacherId', getHomeworkByClass);
 router.get('/Homework/Student/:classId', getHomeworkForClass);
+router.get('/Homework/StudentById/:studentId', getHomeworkForStudent);
 router.delete('/Homework/:id', deleteHomework);
 
 // Teacher Notes Routes
@@ -251,6 +252,8 @@ const noteUpload = multer({
 
 router.post('/TeacherNoteCreate', noteUpload.single('file'), handleMulterError, createTeacherNote);
 router.get('/TeacherNotes/:teacherId', getTeacherNotes);
+router.get('/Notes/School/:schoolId', getSchoolNotes);
+router.get('/Notes/Student/:classId', getNotesByClass);
 router.delete('/TeacherNote/:id', deleteTeacherNote);
 
 // Marks Routes
@@ -325,15 +328,24 @@ router.delete('/ExamRoutine/:id', deleteExamRoutine);
 // Utility route to fix existing exam routine file paths
 router.post('/ExamRoutine/FixPaths', fixExamRoutinePaths);
 
-// Salary Routes
-router.post('/Salary/Create', createSalary);
-router.get('/Salaries/:schoolId', getSalariesBySchool);
-router.get('/Salary/:schoolId/:employeeType/:employeeId', getSalaryByEmployee);
-router.get('/Salary/Calculate/:salaryId', calculateNetSalary);
-router.post('/Salary/Payment/:salaryId', recordPayment);
-router.get('/Salary/PaymentHistory/:salaryId', getPaymentHistory);
-router.delete('/Salary/:id', deleteSalary);
-router.get('/Salary/Summary/:schoolId', getSalarySummary);
+// Salary Routes - Using salaryController for all methods
+router.post('/Salary/Create', salaryController.createSalary);
+router.get('/Salaries/:schoolId', salaryController.getSalariesBySchool);
+router.get('/Salary/:schoolId/:employeeType/:employeeId', salaryController.getSalaryByEmployee);
+router.get('/Salary/Calculate/:salaryId', salaryController.calculateNetSalary);
+router.post('/Salary/Payment/:salaryId', salaryController.recordPayment);
+router.get('/Salary/PaymentHistory/:salaryId', salaryController.getPaymentHistory);
+router.delete('/Salary/:id', salaryController.deleteSalary);
+router.get('/Salary/Summary/:schoolId', salaryController.getSalarySummary);
+
+// New Salary Management Routes
+router.get('/Salary/Employees/:schoolId/:employeeType', asyncHandler(async (req, res) => {
+    return salaryController.getEmployeesWithSalaryStatus(req, res);
+}));
+router.post('/Salary/BulkPayment', salaryController.bulkSalaryPayment);
+router.get('/Salary/ByMonth/:schoolId/:month/:year', salaryController.getSalaryByMonthYear);
+router.put('/Salary/Update/:salaryId', salaryController.updateSalary);
+router.get('/Salary/EmployeeHistory/:schoolId/:employeeType/:employeeId', salaryController.getEmployeePaymentHistory);
 
 // Staff Routes
 router.post('/StaffReg', staffController.staffRegister);
@@ -350,6 +362,15 @@ router.put('/Staff/Salary/:id', staffController.updateSalary);
 router.get('/Staff/Salary/Calculate/:id', staffController.calculateNetSalary);
 router.get('/Staff/Salary/Summary/:schoolId', staffController.getStaffSalarySummary);
 router.put('/Staff/ClearAttendance/:id', staffController.clearStaffAttendance);
+
+// Simple Staff Routes (without login/authentication)
+const simpleStaffController = require('../controllers/simple-staff-controller.js');
+router.post('/SimpleStaff/add', simpleStaffController.addStaff);
+router.get('/SimpleStaffs/:schoolId', simpleStaffController.getAllStaffs);
+router.get('/SimpleStaff/Health', simpleStaffController.healthCheck);
+router.get('/SimpleStaff/:id', simpleStaffController.getStaffDetail);
+router.delete('/SimpleStaff/:id', simpleStaffController.deleteStaff);
+router.delete('/SimpleStaffs/:schoolId', simpleStaffController.deleteAllStaffs);
 
 // Parent Routes
 router.post('/ParentReg', parentController.parentRegister);

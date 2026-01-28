@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const mongoose = require('mongoose');
 const Staff = require('../models/staffSchema.js');
 
 const staffController = {
@@ -75,7 +76,14 @@ const staffController = {
     // Get all staff for a school
     getStaffs: async (req, res) => {
         try {
-            let staff = await Staff.find({ school: req.params.id });
+            const { id } = req.params;
+            
+            // Convert to ObjectId if valid
+            const schoolObjectId = mongoose.Types.ObjectId.isValid(id)
+                ? new mongoose.Types.ObjectId(id)
+                : id;
+            
+            let staff = await Staff.find({ school: schoolObjectId });
             if (staff.length > 0) {
                 let modifiedStaff = staff.map((s) => {
                     return { ...s._doc, password: undefined };
@@ -139,7 +147,14 @@ const staffController = {
     // Delete all staff for a school
     deleteStaffs: async (req, res) => {
         try {
-            const result = await Staff.deleteMany({ school: req.params.id });
+            const { id } = req.params;
+            
+            // Convert to ObjectId if valid
+            const schoolObjectId = mongoose.Types.ObjectId.isValid(id)
+                ? new mongoose.Types.ObjectId(id)
+                : id;
+            
+            const result = await Staff.deleteMany({ school: schoolObjectId });
             if (result.deletedCount === 0) {
                 res.send({ message: "No staff found to delete" });
             } else {
@@ -271,7 +286,13 @@ const staffController = {
     getSalarySummary: async (req, res) => {
         try {
             const { schoolId } = req.params;
-            const staff = await Staff.find({ school: schoolId, status: 'Active' });
+            
+            // Convert to ObjectId if valid
+            const schoolObjectId = mongoose.Types.ObjectId.isValid(schoolId)
+                ? new mongoose.Types.ObjectId(schoolId)
+                : schoolId;
+            
+            const staff = await Staff.find({ school: schoolObjectId, status: 'Active' });
             
             let totalBaseSalary = 0;
             let totalAllowances = 0;
@@ -342,7 +363,13 @@ const staffController = {
     getStaffSalarySummary: async (req, res) => {
         try {
             const { schoolId } = req.params;
-            const staff = await Staff.find({ school: schoolId, status: 'Active' });
+            
+            // Convert to ObjectId if valid
+            const schoolObjectId = mongoose.Types.ObjectId.isValid(schoolId)
+                ? new mongoose.Types.ObjectId(schoolId)
+                : schoolId;
+            
+            const staff = await Staff.find({ school: schoolObjectId, status: 'Active' });
 
             let totalBaseSalary = 0;
             let totalAllowances = 0;

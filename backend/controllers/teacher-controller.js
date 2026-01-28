@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const mongoose = require('mongoose');
 const Teacher = require('../models/teacherSchema.js');
 const Subject = require('../models/subjectSchema.js');
 
@@ -73,7 +74,14 @@ const teacherForgotPassword = async (req, res) => {
 
 const getTeachers = async (req, res) => {
     try {
-        let teachers = await Teacher.find({ school: req.params.id })
+        const { id } = req.params;
+        
+        // Convert to ObjectId if valid
+        const schoolObjectId = mongoose.Types.ObjectId.isValid(id)
+            ? new mongoose.Types.ObjectId(id)
+            : id;
+        
+        let teachers = await Teacher.find({ school: schoolObjectId })
             .populate("teachSubject", "subName")
             .populate("teachSclass", "sclassName");
         if (teachers.length > 0) {
@@ -141,7 +149,14 @@ const deleteTeacher = async (req, res) => {
 
 const deleteTeachers = async (req, res) => {
     try {
-        const deletionResult = await Teacher.deleteMany({ school: req.params.id });
+        const { id } = req.params;
+        
+        // Convert to ObjectId if valid
+        const schoolObjectId = mongoose.Types.ObjectId.isValid(id)
+            ? new mongoose.Types.ObjectId(id)
+            : id;
+        
+        const deletionResult = await Teacher.deleteMany({ school: schoolObjectId });
 
         const deletedCount = deletionResult.deletedCount || 0;
 
@@ -150,7 +165,7 @@ const deleteTeachers = async (req, res) => {
             return;
         }
 
-        const deletedTeachers = await Teacher.find({ school: req.params.id });
+        const deletedTeachers = await Teacher.find({ school: schoolObjectId });
 
         await Subject.updateMany(
             { teacher: { $in: deletedTeachers.map(teacher => teacher._id) }, teacher: { $exists: true } },

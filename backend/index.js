@@ -156,14 +156,33 @@ app.use((req, res) => {
     });
 });
 
-// Error handler
+// Error handler - comprehensive logging for all errors
 app.use((err, req, res, next) => {
+    console.error('═══════════════════════════════════════════');
+    console.error('ROUTE ERROR:', req.method, req.url);
     console.error('Error:', err.message);
+    console.error('Stack:', err.stack);
+    console.error('Type:', err.constructor.name);
+    console.error('═══════════════════════════════════════════');
     res.status(500).json({
         message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        error: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
 });
+
+// Add a wrapper for all routes to catch async errors
+const asyncHandler = (fn) => (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch((err) => {
+        console.error('ASYNC ROUTE ERROR:', req.method, req.url);
+        console.error('Error:', err.message);
+        console.error('Stack:', err.stack);
+        res.status(500).json({
+            message: 'Internal server error',
+            error: err.message
+        });
+    });
+};
 
 app.listen(PORT, () => {
     console.log(`Server started at port no. ${PORT}`)

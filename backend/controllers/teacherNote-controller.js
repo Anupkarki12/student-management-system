@@ -67,6 +67,48 @@ const getTeacherNotes = async (req, res) => {
     }
 };
 
+// Get all notes for a school (for admin)
+const getSchoolNotes = async (req, res) => {
+    try {
+        const { schoolId } = req.params;
+        const notes = await TeacherNote.find({ school: schoolId })
+            .populate('sclass', 'sclassName')
+            .populate('subject', 'subName')
+            .populate('teacher', 'name')
+            .sort({ createdAt: -1 });
+
+        if (notes.length > 0) {
+            res.send(notes);
+        } else {
+            res.send({ message: "No notes found for this school" });
+        }
+    } catch (err) {
+        console.error('Error fetching school notes:', err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Get notes by class (for students)
+const getNotesByClass = async (req, res) => {
+    try {
+        const { classId } = req.params;
+        const notes = await TeacherNote.find({ sclass: classId })
+            .populate('sclass', 'sclassName')
+            .populate('subject', 'subName')
+            .populate('teacher', 'name')
+            .sort({ createdAt: -1 });
+
+        if (notes.length > 0) {
+            res.send(notes);
+        } else {
+            res.send({ message: "No notes found for this class" });
+        }
+    } catch (err) {
+        console.error('Error fetching notes by class:', err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
 const deleteTeacherNote = async (req, res) => {
     try {
         const note = await TeacherNote.findById(req.params.id);
@@ -88,5 +130,5 @@ const deleteTeacherNote = async (req, res) => {
     }
 };
 
-module.exports = { createTeacherNote, getTeacherNotes, deleteTeacherNote };
+module.exports = { createTeacherNote, getTeacherNotes, getSchoolNotes, getNotesByClass, deleteTeacherNote };
 

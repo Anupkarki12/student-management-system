@@ -65,7 +65,10 @@ const parentController = {
                 const validated = await bcrypt.compare(password, parent.password);
                 if (validated) {
                     parent = await parent.populate("school", "schoolName");
-                    parent = await parent.populate("students", "name rollNum sclassName");
+                    parent = await parent.populate({
+                        path: "students",
+                        populate: { path: "sclassName", select: "sclassName" }
+                    });
                     parent.password = undefined;
                     res.send(parent);
                 } else {
@@ -311,7 +314,7 @@ const parentController = {
         }
     },
 
-    // Get parent dashboard data (view child's attendance, results, fees)
+// Get parent dashboard data (view child's attendance, results, fees)
     getParentDashboard: async (req, res) => {
         try {
             const parent = await Parent.findById(req.params.id)
@@ -328,8 +331,11 @@ const parentController = {
             if (parent) {
                 parent.password = undefined;
                 
+                // Import Fee model inside the function to avoid circular dependency
+                const Fee = require('../models/feeSchema.js');
+                
                 // Calculate summary for each student
-                const studentSummaries = parent.students.map(student => {
+                const studentSummaries = await Promise.all(parent.students.map(async (student) => {
                     const totalAttendance = student.attendance?.length || 0;
                     const presentAttendance = student.attendance?.filter(a => a.status === 'Present').length || 0;
                     const attendancePercentage = totalAttendance > 0 ? (presentAttendance / totalAttendance) * 100 : 0;
@@ -338,16 +344,59 @@ const parentController = {
                     const subjectCount = student.examResult?.length || 0;
                     const averageMarks = subjectCount > 0 ? totalMarks / subjectCount : 0;
 
+                    // Get fee information for this student
+                    let feeStatus = {
+                        totalFee: 0,
+                        paidAmount: 0,
+                        dueAmount: 0,
+                        status: 'No Record'
+                    };
+                    
+                    try {
+                        const feeRecord = await Fee.findOne({ student: student._id });
+                        if (feeRecord && feeRecord.feeDetails) {
+                            let total = 0, paid = 0, unpaid = 0;
+                            
+                            feeRecord.feeDetails.forEach(fee => {
+                                total += fee.amount || 0;
+                                if (fee.status === 'Paid') {
+                                    paid += fee.amount || 0;
+                                } else if (fee.status === 'Partial') {
+                                    paid += fee.paidAmount || 0;
+                                    unpaid += (fee.amount || 0) - (fee.paidAmount || 0);
+                                } else {
+                                    unpaid += fee.amount || 0;
+                                }
+                            });
+                            
+                            feeStatus = {
+                                totalFee: total,
+                                paidAmount: paid,
+                                dueAmount: unpaid,
+                                status: unpaid > 0 ? (unpaid === total ? 'Unpaid' : 'Partial') : 'Paid'
+                            };
+                        }
+                    } catch (feeErr) {
+                        console.error('Error fetching fee:', feeErr);
+                    }
+
                     return {
                         studentId: student._id,
                         name: student.name,
                         rollNum: student.rollNum,
                         class: student.sclassName?.sclassName,
+                        photo: student.photo,
                         attendancePercentage: attendancePercentage.toFixed(2),
+                        attendanceCount: `${presentAttendance}/${totalAttendance}`,
                         averageMarks: averageMarks.toFixed(2),
-                        subjectsCount: subjectCount
+                        subjectsCount: subjectCount,
+                        examResult: student.examResult?.map(result => ({
+                            subject: result.subName?.subName,
+                            marksObtained: result.marksObtained
+                        })) || [],
+                        feeStatus: feeStatus
                     };
-                });
+                }));
 
                 res.send({
                     parent: {
