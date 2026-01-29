@@ -23,10 +23,21 @@ import {
     Paper,
     Avatar,
     CircularProgress,
-    Collapse
+    Collapse,
+    FormControl,
+    Select,
+    MenuItem,
+    Stack
 } from '@mui/material';
+import styled from 'styled-components';
+import axios from 'axios';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import CategoryIcon from '@mui/icons-material/Category';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import GradeIcon from '@mui/icons-material/Grade';
+import BookIcon from '@mui/icons-material/Book';
 import {
     Person,
     Assignment,
@@ -51,75 +62,22 @@ import ParentViewAttendance from './ParentViewAttendance';
 import ParentViewHomework from './ParentViewHomework';
 import ParentViewFee from './ParentViewFee';
 
-// Section to show detailed marks for a student
-const StudentMarksSection = ({ examResult }) => {
-    const [expanded, setExpanded] = useState(false);
+// Styled components for beautiful UI
+const GlassCard = styled(Paper)(({ theme }) => ({
+    background: 'rgba(255, 255, 255, 0.9)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '16px',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
+    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+    transition: 'all 0.3s ease-in-out',
+    '&:hover': {
+        transform: 'translateY(-5px)',
+        boxShadow: '0 12px 40px 0 rgba(31, 38, 135, 0.25)',
+    },
+}));
 
-    if (!examResult || examResult.length === 0) {
-        return (
-            <Typography variant="body2" color="text.secondary">
-                No exam results available
-            </Typography>
-        );
-    }
-
-    return (
-        <Box sx={{ mt: 2 }}>
-            <Button 
-                onClick={() => setExpanded(!expanded)}
-                endIcon={expanded ? <ExpandLess /> : <ExpandMore />}
-                sx={{ mb: 1 }}
-            >
-                {expanded ? 'Hide Marks' : 'View Marks'}
-            </Button>
-            <Collapse in={expanded}>
-                <TableContainer component={Paper} variant="outlined">
-                    <Table size="small">
-                        <TableHead>
-                            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                                <TableCell><strong>Subject</strong></TableCell>
-                                <TableCell align="right"><strong>Marks</strong></TableCell>
-                                <TableCell align="right"><strong>Grade</strong></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {examResult.map((result, index) => {
-                                const grade = getGrade(result.marksObtained);
-                                return (
-                                    <TableRow key={index}>
-                                        <TableCell>{result.subject}</TableCell>
-                                        <TableCell align="right">{result.marksObtained}</TableCell>
-                                        <TableCell align="right">
-                                            <Chip 
-                                                label={grade} 
-                                                size="small"
-                                                color={grade === 'A+' || grade === 'A' ? 'success' : 
-                                                       grade === 'B+' || grade === 'B' ? 'primary' : 
-                                                       grade === 'C' ? 'warning' : 'error'}
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Collapse>
-        </Box>
-    );
-};
-
-// Helper function to get grade from marks
-const getGrade = (marks) => {
-    if (marks >= 90) return 'A+';
-    if (marks >= 80) return 'A';
-    if (marks >= 70) return 'B+';
-    if (marks >= 60) return 'B';
-    if (marks >= 50) return 'C';
-    if (marks >= 40) return 'D';
-    return 'F';
-};
-
+ 
+ 
 // Placeholder components for Parent pages
 const ParentHomePage = () => {
     const dispatch = useDispatch();
@@ -258,16 +216,36 @@ const ParentHomePage = () => {
                                         )}
                                     </Box>
 
-                                    {/* Marks Section */}
-                                    <StudentMarksSection examResult={student.examResult} />
+                                    {/* Subjects List */}
+                                    {student.subjects && student.subjects.length > 0 && (
+                                        <Box sx={{ mt: 2, p: 1.5, bgcolor: '#f0f4ff', borderRadius: 1 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                                <BookIcon sx={{ mr: 1, color: '#7f56da' }} />
+                                                <Typography variant="body2" fontWeight="bold">
+                                                    Subjects ({student.subjects.length})
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                {student.subjects.map((subject, index) => (
+                                                    <Chip
+                                                        key={index}
+                                                        label={`${subject.subName}${subject.subCode ? ` (${subject.subCode})` : ''}`}
+                                                        size="small"
+                                                        sx={{
+                                                            bgcolor: 'white',
+                                                            border: '1px solid #7f56da',
+                                                            '& .MuiChip-label': {
+                                                                color: '#7f56da'
+                                                            }
+                                                        }}
+                                                    />
+                                                ))}
+                                            </Box>
+                                        </Box>
+                                    )}
 
-                                    <Box sx={{ mt: 2 }}>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Subjects: {student.subjectsCount} | 
-                                            Attendance: {student.attendancePercentage}% ({student.attendanceCount})
-                                        </Typography>
-                                    </Box>
-                                </CardContent>
+                                    {/* Marks Section */}
+                                 </CardContent>
                                 <CardActions>
                                     <Button 
                                         size="small" 
@@ -515,26 +493,8 @@ const ChildDetails = () => {
                                 </Typography>
                             </Box>
                         </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
-                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-                                <Typography variant="h4" color="success.main" fontWeight="bold">
-                                    {child.averageMarks}%
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Average Marks
-                                </Typography>
-                            </Box>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
-                            <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
-                                <Typography variant="h4" color="info.main" fontWeight="bold">
-                                    {child.subjectsCount || 0}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Subjects
-                                </Typography>
-                            </Box>
-                        </Grid>
+                       
+                         
                         <Grid item xs={12} sm={6} md={3}>
                             <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
                                 <Chip 
@@ -757,17 +717,426 @@ const ChildDetails = () => {
 };
 
 const ChildMarks = () => {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const { studentId } = useParams();
     const { currentUser } = useSelector(state => state.user);
-    const { loading, userDetails } = useSelector(state => state.parent);
+    const { userDetails, loading } = useSelector(state => state.parent);
+    
+    const [studentMarks, setStudentMarks] = useState([]);
+    const [loadingMarks, setLoadingMarks] = useState(false);
+    const [examTypeFilter, setExamTypeFilter] = useState('all');
+    
+    // Available exam types
+    const examTypes = ['First Terminal', 'Second Terminal', 'Mid-Terminal', 'Annual', 'Test'];
+    
+    // Find the selected child from the students list
+    const child = userDetails?.students?.find(s => s.studentId === studentId);
+
+    useEffect(() => {
+        if (studentId) {
+            fetchStudentMarks();
+        }
+    }, [studentId, examTypeFilter]);
+
+    const fetchStudentMarks = async () => {
+        setLoadingMarks(true);
+        try {
+            let url = `${process.env.REACT_APP_BASE_URL}/Marks/Student/${studentId}`;
+            if (examTypeFilter !== 'all') {
+                url += `?examType=${encodeURIComponent(examTypeFilter)}`;
+            }
+            const result = await axios.get(url);
+            if (result.data && result.data.message) {
+                setStudentMarks([]);
+            } else if (Array.isArray(result.data)) {
+                setStudentMarks(result.data);
+            } else {
+                setStudentMarks([]);
+            }
+        } catch (error) {
+            console.error('Error fetching marks:', error);
+            setStudentMarks([]);
+        }
+        setLoadingMarks(false);
+    };
+
+    // Calculate grade from percentage
+    const calculateGrade = (percentage) => {
+        if (percentage >= 90) return 'A+';
+        if (percentage >= 80) return 'A';
+        if (percentage >= 70) return 'B+';
+        if (percentage >= 60) return 'B';
+        if (percentage >= 50) return 'C+';
+        if (percentage >= 40) return 'C';
+        return 'F';
+    };
+
+    // Get grade color
+    const getGradeColor = (grade) => {
+        const colors = {
+            'A+': '#2e7d32',
+            'A': '#1976d2',
+            'B+': '#0288d1',
+            'B': '#00796b',
+            'C+': '#f57c00',
+            'C': '#ffa000',
+            'F': '#d32f2f'
+        };
+        return colors[grade] || '#757575';
+    };
+
+    // Get exam type color
+    const getExamTypeColor = (examType) => {
+        const colors = {
+            'First Terminal': '#667eea',
+            'Second Terminal': '#764ba2',
+            'Mid-Terminal': '#f093fb',
+            'Annual': '#4facfe',
+            'Test': '#ff6b6b'
+        };
+        return colors[examType] || '#757575';
+    };
+
+    // Calculate statistics
+    const calculateStats = () => {
+        if (studentMarks.length === 0) return { average: 0, total: '0/0', percentage: 0 };
+
+        const totalObtained = studentMarks.reduce((sum, m) => sum + m.marksObtained, 0);
+        const totalMax = studentMarks.reduce((sum, m) => sum + m.maxMarks, 0);
+        const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100) : 0;
+
+        return {
+            average: (totalObtained / studentMarks.length).toFixed(1),
+            total: `${totalObtained}/${totalMax}`,
+            percentage: percentage.toFixed(1)
+        };
+    };
+
+    const stats = calculateStats();
+
+    // Clear filter
+    const clearFilters = () => {
+        setExamTypeFilter('all');
+    };
+
+    // Check if any filter is active
+    const hasActiveFilters = examTypeFilter !== 'all';
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (!child) {
+        return (
+            <Box>
+                <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
+                    Academic Performance
+                </Typography>
+                <Card sx={{ p: 4, textAlign: 'center' }}>
+                    <Typography variant="h6" color="text.secondary">
+                        Child not found. Please select a child from "My Children".
+                    </Typography>
+                    <Button 
+                        variant="contained" 
+                        sx={{ mt: 2 }}
+                        onClick={() => navigate('/Parent/children')}
+                    >
+                        View My Children
+                    </Button>
+                </Card>
+            </Box>
+        );
+    }
 
     return (
         <Box>
-            <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-                Academic Performance
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-                Detailed marks and performance reports for your children will be displayed here.
-            </Typography>
+            <Box sx={{ mb: 3 }}>
+                <Button 
+                    variant="text" 
+                    startIcon={<KeyboardArrowLeft />}
+                    onClick={() => navigate(`/Parent/child/${studentId}`)}
+                    sx={{ mb: 2 }}
+                >
+                    Back to Child Details
+                </Button>
+                
+                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                    Academic Performance
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+                    Detailed marks and results for <strong>{child.name}</strong>
+                </Typography>
+            </Box>
+
+            {/* Student Info Header */}
+            <GlassCard sx={{ p: 3, mb: 3 }}>
+                <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} md={8}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Avatar 
+                                src={child.photo ? `http://localhost:5000/${child.photo}` : null}
+                                sx={{ bgcolor: '#7f56da', width: 60, height: 60, mr: 2 }}
+                            >
+                                <Person />
+                            </Avatar>
+                            <Box>
+                                <Typography variant="h5" fontWeight="bold">
+                                    {child.name}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Roll No: {child.rollNum} | Class: {child.class}
+                                </Typography>
+                            </Box>
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                        {/* Filter Section */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <FilterListIcon sx={{ color: '#7f56da' }} />
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                Filter by Exam Type
+                            </Typography>
+                            {hasActiveFilters && (
+                                <Chip
+                                    label="Clear"
+                                    size="small"
+                                    onClick={clearFilters}
+                                    onDelete={clearFilters}
+                                    color="error"
+                                    variant="outlined"
+                                    sx={{ ml: 'auto' }}
+                                />
+                            )}
+                        </Box>
+                        
+                        <FormControl fullWidth size="small">
+                            <Select
+                                value={examTypeFilter}
+                                onChange={(e) => setExamTypeFilter(e.target.value)}
+                                displayEmpty
+                            >
+                                <MenuItem value="all">All Exam Types</MenuItem>
+                                {examTypes.map(type => (
+                                    <MenuItem key={type} value={type}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Chip
+                                                size="small"
+                                                sx={{
+                                                    mr: 1,
+                                                    backgroundColor: getExamTypeColor(type),
+                                                    color: 'white',
+                                                    height: 20,
+                                                    minWidth: 20
+                                                }}
+                                            />
+                                            {type}
+                                        </Box>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        {/* Active Filter Chips */}
+                        {hasActiveFilters && (
+                            <Box sx={{ mt: 1 }}>
+                                <Chip
+                                    size="small"
+                                    icon={<CategoryIcon sx={{ fontSize: 14 }} />}
+                                    label={examTypeFilter}
+                                    onDelete={() => setExamTypeFilter('all')}
+                                    color="secondary"
+                                    variant="outlined"
+                                />
+                            </Box>
+                        )}
+                    </Grid>
+                </Grid>
+            </GlassCard>
+
+            {/* Statistics Cards */}
+            <Grid container spacing={3} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={4}>
+                    <Paper sx={{ p: 3, textAlign: 'center', bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                        <Typography variant="h6" color="textSecondary" gutterBottom>
+                            Average Marks
+                        </Typography>
+                        <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#7f56da' }}>
+                            {stats.average}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                            out of 100
+                        </Typography>
+                    </Paper>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                    <Paper sx={{ p: 3, textAlign: 'center', bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                        <Typography variant="h6" color="textSecondary" gutterBottom>
+                            Total Marks
+                        </Typography>
+                        <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#764ba2' }}>
+                            {stats.total}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                            across {studentMarks.length} exam(s)
+                        </Typography>
+                    </Paper>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                    <Paper sx={{ p: 3, textAlign: 'center', bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                        <Typography variant="h6" color="textSecondary" gutterBottom>
+                            Overall Percentage
+                        </Typography>
+                        <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#4facfe' }}>
+                            {stats.percentage}%
+                        </Typography>
+                        <LinearProgress
+                            variant="determinate"
+                            value={Math.min(parseFloat(stats.percentage), 100)}
+                            sx={{
+                                mt: 2,
+                                height: 10,
+                                borderRadius: 5,
+                                backgroundColor: '#e0e0e0',
+                                '& .MuiLinearProgress-bar': {
+                                    backgroundColor: parseFloat(stats.percentage) >= 40 ? '#4caf50' : '#f44336',
+                                    borderRadius: 5
+                                }
+                            }}
+                        />
+                    </Paper>
+                </Grid>
+            </Grid>
+
+            {/* Results Table */}
+            <GlassCard sx={{ overflow: 'hidden' }}>
+                <Box sx={{ p: 3, borderBottom: '1px solid #e0e0e0' }}>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#1a237e' }}>
+                        <AssessmentIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+                        Exam Results
+                    </Typography>
+                </Box>
+
+                {loadingMarks ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 8 }}>
+                        <CircularProgress size={60} />
+                    </Box>
+                ) : studentMarks.length === 0 ? (
+                    <Box sx={{ p: 6, textAlign: 'center' }}>
+                        <GradeIcon sx={{ fontSize: 80, color: '#ccc', mb: 2 }} />
+                        <Typography variant="h5" color="textSecondary" gutterBottom>
+                            No Results Found
+                        </Typography>
+                        <Typography variant="body1" color="textSecondary">
+                            {examTypeFilter === 'all'
+                                ? 'No exam results have been entered for this student yet'
+                                : `No results found for ${examTypeFilter} exam`}
+                        </Typography>
+                    </Box>
+                ) : (
+                    <TableContainer>
+                        <Table>
+                            <TableHead>
+                                <TableRow sx={{ bgcolor: '#f5f5fa' }}>
+                                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Exam Type</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Subject</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Marks</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Percentage</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', py: 2 }}>Grade</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {studentMarks.map((mark) => {
+                                    const percentage = mark.maxMarks > 0
+                                        ? ((mark.marksObtained / mark.maxMarks) * 100)
+                                        : 0;
+                                    const grade = calculateGrade(percentage);
+                                    return (
+                                        <TableRow 
+                                            key={mark._id}
+                                            sx={{ 
+                                                '&:hover': { bgcolor: 'rgba(127, 86, 218, 0.05)' },
+                                                transition: 'background-color 0.2s ease'
+                                            }}
+                                        >
+                                            <TableCell>
+                                                <Chip
+                                                    label={mark.examType}
+                                                    sx={{
+                                                        backgroundColor: getExamTypeColor(mark.examType),
+                                                        color: 'white',
+                                                        fontWeight: 'bold'
+                                                    }}
+                                                    size="small"
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                    <BookIcon sx={{ fontSize: 18, mr: 1, color: '#764ba2' }} />
+                                                    {mark.subject?.subName || 'N/A'}
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body1" fontWeight="bold">
+                                                    {mark.marksObtained} / {mark.maxMarks}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Box sx={{ width: 60 }}>
+                                                        <LinearProgress
+                                                            variant="determinate"
+                                                            value={Math.min(percentage, 100)}
+                                                            sx={{
+                                                                height: 8,
+                                                                borderRadius: 4,
+                                                                backgroundColor: '#e0e0e0',
+                                                                '& .MuiLinearProgress-bar': {
+                                                                    backgroundColor: getGradeColor(grade),
+                                                                    borderRadius: 4
+                                                                }
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                    <Typography variant="body2" fontWeight="bold">
+                                                        {percentage.toFixed(1)}%
+                                                    </Typography>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={grade}
+                                                    sx={{
+                                                        backgroundColor: getGradeColor(grade),
+                                                        color: 'white',
+                                                        fontWeight: 'bold',
+                                                        minWidth: 50
+                                                    }}
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                )}
+            </GlassCard>
+
+            {/* Back Button */}
+            <Box sx={{ mt: 3 }}>
+                <Button 
+                    variant="text" 
+                    startIcon={<KeyboardArrowLeft />}
+                    onClick={() => navigate(`/Parent/child/${studentId}`)}
+                >
+                    Back to Child Details
+                </Button>
+            </Box>
         </Box>
     );
 };

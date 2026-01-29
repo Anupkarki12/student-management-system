@@ -1,6 +1,8 @@
 const bcrypt = require('bcrypt');
 const Parent = require('../models/parentSchema.js');
 const Student = require('../models/studentSchema.js');
+const Subject = require('../models/subjectSchema.js');
+const Marks = require('../models/marksSchema.js');
 
 const parentController = {
     // Register new parent/guardian
@@ -339,10 +341,44 @@ const parentController = {
                     const totalAttendance = student.attendance?.length || 0;
                     const presentAttendance = student.attendance?.filter(a => a.status === 'Present').length || 0;
                     const attendancePercentage = totalAttendance > 0 ? (presentAttendance / totalAttendance) * 100 : 0;
+
+                    // Fetch marks from the Marks collection to get proper maxMarks
+                    let averageMarks = 0;
+                    let examResult = [];
+                    let subjectCount = 0;
                     
-                    const totalMarks = student.examResult?.reduce((sum, r) => sum + (r.marksObtained || 0), 0) || 0;
-                    const subjectCount = student.examResult?.length || 0;
-                    const averageMarks = subjectCount > 0 ? totalMarks / subjectCount : 0;
+                    try {
+                        const marksData = await Marks.find({ student: student._id })
+                            .populate('subject', 'subName subCode')
+                            .lean();
+                        
+                        if (marksData && marksData.length > 0) {
+                            const totalMarksObtained = marksData.reduce((sum, m) => sum + (m.marksObtained || 0), 0);
+                            const totalMaxMarks = marksData.reduce((sum, m) => sum + (m.maxMarks || 0), 0);
+                            
+                            // Calculate overall percentage: (total obtained / total max) * 100
+                            averageMarks = totalMaxMarks > 0 ? (totalMarksObtained / totalMaxMarks) * 100 : 0;
+                            
+                            // Format exam result for frontend
+                            examResult = marksData.map(mark => ({
+                                subject: mark.subject?.subName,
+                                marksObtained: ((mark.marksObtained / mark.maxMarks) * 100).toFixed(2),
+                                examType: mark.examType
+                            }));
+                            
+                            subjectCount = marksData.length;
+                        }
+                    } catch (marksErr) {
+                        console.error('Error fetching marks:', marksErr);
+                        // Fallback to old method if Marks collection query fails
+                        const totalMarks = student.examResult?.reduce((sum, r) => sum + (r.marksObtained || 0), 0) || 0;
+                        subjectCount = student.examResult?.length || 0;
+                        averageMarks = subjectCount > 0 ? totalMarks / subjectCount : 0;
+                        examResult = student.examResult?.map(result => ({
+                            subject: result.subName?.subName,
+                            marksObtained: result.marksObtained
+                        })) || [];
+                    }
 
                     // Get fee information for this student
                     let feeStatus = {
@@ -380,20 +416,34 @@ const parentController = {
                         console.error('Error fetching fee:', feeErr);
                     }
 
+                    // Get subjects for this student's class
+                    let subjects = [];
+                    try {
+                        if (student.sclassName?._id) {
+                            subjects = await Subject.find({ sclassName: student.sclassName._id })
+                                .select('subName subCode')
+                                .lean();
+                        }
+                    } catch (subjectErr) {
+                        console.error('Error fetching subjects:', subjectErr);
+                    }
+
                     return {
                         studentId: student._id,
                         name: student.name,
                         rollNum: student.rollNum,
                         class: student.sclassName?.sclassName,
+                        classId: student.sclassName?._id,
                         photo: student.photo,
                         attendancePercentage: attendancePercentage.toFixed(2),
                         attendanceCount: `${presentAttendance}/${totalAttendance}`,
                         averageMarks: averageMarks.toFixed(2),
                         subjectsCount: subjectCount,
-                        examResult: student.examResult?.map(result => ({
-                            subject: result.subName?.subName,
-                            marksObtained: result.marksObtained
-                        })) || [],
+                        subjects: subjects.map(sub => ({
+                            subName: sub.subName,
+                            subCode: sub.subCode
+                        })),
+                        examResult: examResult,
                         feeStatus: feeStatus
                     };
                 }));

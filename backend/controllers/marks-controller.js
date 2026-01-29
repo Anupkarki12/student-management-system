@@ -315,7 +315,16 @@ const getMarks = async (req, res) => {
 const getStudentMarks = async (req, res) => {
     try {
         const { studentId } = req.params;
-        const marks = await Marks.find({ student: studentId })
+        const { examType } = req.query;
+        
+        let query = { student: studentId };
+        
+        // Filter by exam type if provided
+        if (examType && examType !== 'all') {
+            query.examType = examType;
+        }
+        
+        const marks = await Marks.find(query)
             .populate('subject', 'subName')
             .populate('teacher', 'name')
             .sort({ examDate: -1 });
