@@ -8,9 +8,22 @@ const Sclass = require('../models/sclassSchema');
 // Helper function to check if a string is a valid MongoDB ObjectId
 const isValidObjectId = (id) => {
     try {
+        if (!id || typeof id !== 'string') return false;
         return mongoose.Types.ObjectId.isValid(id) && id.length === 24;
     } catch (e) {
         return false;
+    }
+};
+
+// Helper function to safely convert string to ObjectId
+const toObjectId = (id) => {
+    try {
+        if (isValidObjectId(id)) {
+            return new mongoose.Types.ObjectId(id);
+        }
+        return id; // Return as-is if not a valid ObjectId (for testing or edge cases)
+    } catch (e) {
+        return id;
     }
 };
 
@@ -29,11 +42,23 @@ const salaryController = {
                 deductions,
                 effectiveDate 
             } = req.body;
+
+            // ✅ FIX: Validate employeeId is a valid ObjectId
+            if (!employeeId || !mongoose.Types.ObjectId.isValid(employeeId)) {
+                return res.status(400).json({ error: "Invalid employee ID. Must be a valid ObjectId." });
+            }
+
+            // ✅ FIX: Validate employeeType
+            if (!employeeType || !['teacher', 'staff', 'admin'].includes(employeeType)) {
+                return res.status(400).json({ error: "Invalid employee type. Must be teacher, staff, or admin." });
+            }
+            
+            const employeeObjectId = new mongoose.Types.ObjectId(employeeId);
             
             const existingSalary = await Salary.findOne({ 
                 school, 
                 employeeType, 
-                employee: employeeId,
+                employee: employeeObjectId,
                 status: 'active'
             });
             
@@ -50,7 +75,7 @@ const salaryController = {
             const salary = new Salary({
                 school,
                 employeeType,
-                employee: employeeId,
+                employee: employeeObjectId, // ✅ Must be ObjectId
                 position,
                 baseSalary,
                 allowances: allowances || {},
@@ -64,31 +89,84 @@ const salaryController = {
             res.status(500).json({ error: error.message });
         }
     },
+
+    // Utility endpoint to clean up corrupted salary records
+    cleanupCorruptedSalaries: async (req, res) => {
+        try {
+            // Find and delete records where employee is a string instead of ObjectId
+            const corruptedRecords = await Salary.find({
+                employee: { $type: "string" }
+            });
+
+            const deletedCount = await Salary.deleteMany({
+                employee: { $type: "string" }
+            });
+
+            console.log(`Found ${corruptedRecords.length} corrupted salary records`);
+            console.log(`Deleted ${deletedCount.deletedCount} corrupted records`);
+
+            return res.status(200).json({ 
+                message: 'Cleanup completed',
+                found: corruptedRecords.length,
+                deleted: deletedCount.deletedCount
+            });
+        } catch (error) {
+            console.error("Cleanup error:", error);
+            return res.status(500).json({ error: error.message });
+        }
+    },
     
+    // Helper function to check if a string is a valid MongoDB ObjectId
+    isValidObjectId: function(id) {
+        try {
+            if (!id || typeof id !== 'string') return false;
+            return mongoose.Types.ObjectId.isValid(id) && id.length === 24;
+        } catch (e) {
+            return false;
+        }
+    },
+
     // Get salaries by school with populated employee data
     getSalariesBySchool: async (req, res) => {
         try {
             const { schoolId } = req.params;
             
             // Convert to ObjectId if valid
-            const schoolObjectId = mongoose.Types.ObjectId.isValid(schoolId)
+            const schoolObjectId = this.isValidObjectId(schoolId)
                 ? new mongoose.Types.ObjectId(schoolId)
                 : schoolId;
             
             const salaries = await Salary.find({ school: schoolObjectId, status: 'active' }).lean();
 
+            // Filter out corrupted records where employee is not a valid ObjectId
+            const validSalaries = salaries.filter(salary => {
+                const employeeId = salary.employee;
+                const isValid = this.isValidObjectId(employeeId);
+                if (!isValid) {
+                    console.warn(`⚠️ Skipping corrupted salary record ${salary._id}: employee field is "${employeeId}" (expected ObjectId)`);
+                }
+                return isValid;
+            });
+
+            const corruptedCount = salaries.length - validSalaries.length;
+            if (corruptedCount > 0) {
+                console.warn(`⚠️ Found ${corruptedCount} corrupted salary records in school ${schoolId}. Consider running cleanup.`);
+            }
+
             // Manually populate employee data based on employeeType
             const populatedSalaries = await Promise.all(
-                salaries.map(async (salary) => {
+                validSalaries.map(async (salary) => {
                     let employeeData = null;
 
                     try {
+                        const employeeId = salary.employee;
+
                         if (salary.employeeType === 'teacher') {
-                            employeeData = await Teacher.findById(salary.employee)
+                            employeeData = await Teacher.findById(employeeId)
                                 .select('name email photo')
                                 .lean();
                         } else if (salary.employeeType === 'staff') {
-                            employeeData = await Staff.findById(salary.employee)
+                            employeeData = await Staff.findById(employeeId)
                                 .select('name email photo')
                                 .lean();
                         }
@@ -99,6 +177,7 @@ const salaryController = {
                     return {
                         ...salary,
                         employee: employeeData || {
+                            _id: salary.employee,
                             name: 'Unknown',
                             email: '',
                             photo: null
@@ -110,6 +189,14 @@ const salaryController = {
             res.status(200).json(populatedSalaries);
         } catch (error) {
             console.error('Error in getSalariesBySchool:', error);
+            // Check if it's a CastError
+            if (error.name === 'CastError') {
+                return res.status(400).json({ 
+                    error: 'Invalid data format in salary records. Please check the data.',
+                    details: error.message,
+                    hint: 'Run cleanup: POST /Salary/Cleanup'
+                });
+            }
             res.status(500).json({ error: error.message });
         }
     },
@@ -118,6 +205,11 @@ const salaryController = {
     getSalaryByEmployee: async (req, res) => {
         try {
             const { schoolId, employeeType, employeeId } = req.params;
+            
+            // Validate employeeId is a valid ObjectId
+            if (!employeeId || !mongoose.Types.ObjectId.isValid(employeeId) || employeeId.length !== 24) {
+                return res.status(400).json({ error: "Invalid employee ID format" });
+            }
             
             // Convert to ObjectId if valid
             const schoolObjectId = mongoose.Types.ObjectId.isValid(schoolId)
@@ -137,6 +229,7 @@ const salaryController = {
             
             res.status(200).json(salary);
         } catch (error) {
+            console.error('Error in getSalaryByEmployee:', error);
             res.status(500).json({ error: error.message });
         }
     },
@@ -293,203 +386,92 @@ const salaryController = {
     getEmployeesWithSalaryStatus: async (req, res) => {
         try {
             const { schoolId, employeeType } = req.params;
-            
-            console.log('=== getEmployeesWithSalaryStatus called ===');
-            console.log('schoolId:', schoolId);
-            console.log('employeeType:', employeeType);
 
-            // Validate schoolId
-            if (!schoolId) {
-                console.error('School ID is missing');
-                return res.status(400).json({ error: 'School ID is required' });
+            if (!employeeType) {
+                return res.status(400).json({ error: "Employee type is required" });
             }
 
-            // Convert to ObjectId if valid - THIS IS THE CRITICAL FIX
-            const schoolObjectId = mongoose.Types.ObjectId.isValid(schoolId)
-                ? new mongoose.Types.ObjectId(schoolId)
-                : schoolId;
-            
-            console.log('schoolObjectId:', schoolObjectId);
+            const type = employeeType.toLowerCase();
+
+            if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+                return res.status(400).json({ error: "Invalid school ID" });
+            }
+
+            const schoolObjectId = new mongoose.Types.ObjectId(schoolId);
 
             let employees = [];
             let employeeSalaries = [];
-            
-            // Fetch employees based on type
-            if (employeeType === 'teacher') {
-                // Fetch teachers with minimal populate to avoid errors
+
+            if (type === "teacher") {
                 employees = await Teacher.find({ school: schoolObjectId })
-                    .select('-password')
+                    .select("-password")
                     .lean();
-                
-                // Get subject and class info separately to avoid deep populate issues
-                const subjectIds = [...new Set(employees.map(t => t.teachSubject).filter(Boolean))];
-                const classIds = [...new Set(employees.map(t => t.teachSclass).filter(Boolean))];
-                
-                const subjects = subjectIds.length > 0 ? 
-                    await Subject.find({ _id: { $in: subjectIds } }).select('subName').lean() : [];
-                const classes = classIds.length > 0 ? 
-                    await Sclass.find({ _id: { $in: classIds } }).select('sclassName').lean() : [];
-                
-                const subjectMap = new Map(subjects.map(s => [s._id.toString(), s]));
-                const classMap = new Map(classes.map(c => [c._id.toString(), c]));
-                
-                // Enrich teachers with subject/class info
-                employees = employees.map(emp => ({
-                    ...emp,
-                    teachSubject: emp.teachSubject ? (subjectMap.get(emp.teachSubject.toString()) || { subName: 'Unknown' }) : null,
-                    teachSclass: emp.teachSclass ? (classMap.get(emp.teachSclass.toString()) || { sclassName: 'Not Assigned' }) : null
-                }));
-                
-                // Fetch salaries for teachers
-                employeeSalaries = await Salary.find({ 
-                    school: schoolObjectId, 
-                    employeeType: 'teacher', 
-                    status: 'active' 
+
+                employeeSalaries = await Salary.find({
+                    school: schoolObjectId,
+                    employeeType: "teacher",
+                    status: "active"
                 }).lean();
-                
-            } else if (employeeType === 'staff') {
-                // Fetch staff
+
+            } else if (type === "staff") {
                 employees = await Staff.find({ school: schoolObjectId })
-                    .select('-password')
+                    .select("-password")
                     .lean();
-                
-                // Fetch salaries for staff
-                employeeSalaries = await Salary.find({ 
-                    school: schoolObjectId, 
-                    employeeType: 'staff', 
-                    status: 'active' 
+
+                employeeSalaries = await Salary.find({
+                    school: schoolObjectId,
+                    employeeType: "staff",
+                    status: "active"
                 }).lean();
-            } else if (employeeType === 'all') {
-                // Fetch both teachers and staff
-                const teachers = await Teacher.find({ school: schoolObjectId })
-                    .select('-password')
-                    .lean();
-                
-                const staffs = await Staff.find({ school: schoolObjectId })
-                    .select('-password')
-                    .lean();
-                
-                const subjectIds = [...new Set(teachers.map(t => t.teachSubject).filter(Boolean))];
-                const classIds = [...new Set(teachers.map(t => t.teachSclass).filter(Boolean))];
-                
-                const subjects = subjectIds.length > 0 ? 
-                    await Subject.find({ _id: { $in: subjectIds } }).select('subName').lean() : [];
-                const classes = classIds.length > 0 ? 
-                    await Sclass.find({ _id: { $in: classIds } }).select('sclassName').lean() : [];
-                
-                const subjectMap = new Map(subjects.map(s => [s._id.toString(), s]));
-                const classMap = new Map(classes.map(c => [c._id.toString(), c]));
-                
-                const enrichedTeachers = teachers.map(emp => ({
-                    ...emp,
-                    teachSubject: emp.teachSubject ? (subjectMap.get(emp.teachSubject.toString()) || { subName: 'Unknown' }) : null,
-                    teachSclass: emp.teachSclass ? (classMap.get(emp.teachSclass.toString()) || { sclassName: 'Not Assigned' }) : null
-                }));
-                
-                const teacherSalaries = await Salary.find({ 
-                    school: schoolObjectId, 
-                    employeeType: 'teacher', 
-                    status: 'active' 
-                }).lean();
-                
-                const staffSalaries = await Salary.find({ 
-                    school: schoolObjectId, 
-                    employeeType: 'staff', 
-                    status: 'active' 
-                }).lean();
-                
-                employees = [
-                    ...enrichedTeachers.map(t => ({ ...t, employeeType: 'teacher' })),
-                    ...staffs.map(s => ({ ...s, employeeType: 'staff' }))
-                ];
-                employeeSalaries = [...teacherSalaries, ...staffSalaries];
             } else {
-                return res.status(400).json({ error: 'Invalid employee type. Must be teacher, staff, or all' });
+                return res.status(400).json({ error: "Invalid employee type" });
             }
-            
-            // If no employees found, return empty array with proper message
-            if (employees.length === 0) {
-                console.log(`No ${employeeType}s found for school ${schoolId}`);
-                return res.status(200).json([]);
+
+            // 🛡️ Filter out corrupted salary records (where employee is not a valid ObjectId)
+            const validSalaries = employeeSalaries.filter(salary => {
+                const employeeId = salary.employee;
+                const isValid = mongoose.Types.ObjectId.isValid(employeeId) && 
+                               (typeof employeeId === 'string' ? employeeId.length === 24 : true);
+                if (!isValid) {
+                    console.warn(`⚠️ Skipping corrupted salary record for employee: "${employeeId}"`);
+                }
+                return isValid;
+            });
+
+            const corruptedCount = employeeSalaries.length - validSalaries.length;
+            if (corruptedCount > 0) {
+                console.warn(`⚠️ Found ${corruptedCount} corrupted salary records in ${type} salaries`);
             }
-            
-            // Create a map of salary records for faster lookup
+
             const salaryMap = new Map();
-            employeeSalaries.forEach(salary => {
-                const empId = salary.employee ? salary.employee.toString() : null;
-                const type = salary.employeeType;
-                if (empId) {
-                    const key = `${empId}-${type}`;
-                    salaryMap.set(key, salary);
+            validSalaries.forEach(s => {
+                if (s.employee) {
+                    try {
+                        salaryMap.set(s.employee.toString(), s);
+                    } catch (e) {
+                        console.warn(`⚠️ Could not process salary record:`, s._id);
+                    }
                 }
             });
-            
-            // Combine employees with their salary info
-            const employeesWithSalary = employees.map(employee => {
-                const employeeId = employee._id.toString();
-                const type = employee.employeeType || employeeType;
-                const salaryKey = `${employeeId}-${type}`;
-                const salaryRecord = salaryMap.get(salaryKey);
-                
-                const totalAllowances = salaryRecord ? 
-                    (salaryRecord.allowances?.houseRent || 0) +
-                    (salaryRecord.allowances?.medical || 0) +
-                    (salaryRecord.allowances?.transport || 0) +
-                    (salaryRecord.allowances?.other || 0) : 0;
-                
-                const totalDeductions = salaryRecord ? 
-                    (salaryRecord.deductions?.providentFund || 0) +
-                    (salaryRecord.deductions?.tax || 0) +
-                    (salaryRecord.deductions?.insurance || 0) +
-                    (salaryRecord.deductions?.other || 0) : 0;
-                
-                const netSalary = salaryRecord ? salaryRecord.baseSalary + totalAllowances - totalDeductions : 0;
-                
-                // Find last payment
-                let lastPaid = null;
-                let lastPaymentStatus = 'pending';
-                if (salaryRecord?.paymentHistory?.length > 0) {
-                    const sortedHistory = [...salaryRecord.paymentHistory].sort((a, b) => 
-                        new Date(b.paymentDate) - new Date(a.paymentDate)
-                    );
-                    lastPaid = sortedHistory[0];
-                    lastPaymentStatus = sortedHistory[0].status;
-                }
-                
-                // Get position based on type
-                let position = 'Staff';
-                let className = '';
-                
-                if (type === 'teacher') {
-                    position = employee.teachSubject?.subName || 'Teacher';
-                    className = employee.teachSclass?.sclassName || 'Not Assigned';
-                } else {
-                    position = employee.position || 'Staff';
-                }
-                
+
+            const result = employees.map(emp => {
+                const salary = salaryMap.get(emp._id.toString());
+
                 return {
-                    _id: employee._id,
-                    name: employee.name,
-                    email: employee.email,
-                    photo: employee.photo,
+                    _id: emp._id,
+                    name: emp.name,
+                    email: emp.email,
                     employeeType: type,
-                    position: position,
-                    className: className,
-                    baseSalary: salaryRecord?.baseSalary || 0,
-                    totalAllowances,
-                    totalDeductions,
-                    netSalary,
-                    hasSalaryRecord: !!salaryRecord,
-                    salaryId: salaryRecord?._id ? salaryRecord._id.toString() : null,
-                    lastPaid,
-                    lastPaymentStatus
+                    baseSalary: salary?.baseSalary || 0,
+                    hasSalaryRecord: !!salary
                 };
             });
-            
-            res.status(200).json(employeesWithSalary);
+
+            return res.status(200).json(result);
+
         } catch (error) {
-            console.error('Error in getEmployeesWithSalaryStatus:', error);
-            res.status(500).json({ error: error.message || 'Internal server error' });
+            console.error("Salary error:", error);
+            return res.status(500).json({ error: error.message });
         }
     },
 
@@ -618,6 +600,11 @@ const salaryController = {
         try {
             const { schoolId, employeeType, employeeId } = req.params;
             
+            // Validate employeeId is a valid ObjectId
+            if (!employeeId || !mongoose.Types.ObjectId.isValid(employeeId) || employeeId.length !== 24) {
+                return res.status(400).json({ error: "Invalid employee ID format" });
+            }
+            
             // Convert to ObjectId if valid
             const schoolObjectId = mongoose.Types.ObjectId.isValid(schoolId)
                 ? new mongoose.Types.ObjectId(schoolId)
@@ -643,6 +630,7 @@ const salaryController = {
                 )
             });
         } catch (error) {
+            console.error('Error in getEmployeePaymentHistory:', error);
             res.status(500).json({ error: error.message });
         }
     }

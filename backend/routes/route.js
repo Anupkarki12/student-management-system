@@ -330,7 +330,35 @@ router.post('/ExamRoutine/FixPaths', fixExamRoutinePaths);
 
 // Salary Routes - Using salaryController for all methods
 router.post('/Salary/Create', salaryController.createSalary);
+router.post('/Salary/Cleanup', salaryController.cleanupCorruptedSalaries);
 router.get('/Salaries/:schoolId', salaryController.getSalariesBySchool);
+
+// IMPORTANT: Define more specific routes BEFORE less specific routes
+// The /Salary/Employees/:schoolId/:employeeType route MUST come before
+// /Salary/:schoolId/:employeeType/:employeeId to avoid route matching conflicts
+
+// New Salary Management Routes - Enhanced with better error handling
+router.get('/Salary/Employees/:schoolId/:employeeType', asyncHandler(async (req, res) => {
+    const { schoolId, employeeType } = req.params;
+    
+    console.log(`[Salary] GET /Salary/Employees/${schoolId}/${employeeType}`);
+    
+    // Validate parameters before calling controller
+    if (!schoolId) {
+        console.error('[Salary] Missing schoolId parameter');
+        return res.status(400).json({ error: 'School ID is required' });
+    }
+    
+    if (!employeeType || !['teacher', 'staff', 'all'].includes(employeeType)) {
+        console.error(`[Salary] Invalid employeeType: ${employeeType}`);
+        return res.status(400).json({ error: 'Invalid employee type. Must be teacher, staff, or all' });
+    }
+    
+    // Call the controller directly - it handles its own response
+    await salaryController.getEmployeesWithSalaryStatus(req, res);
+}));
+
+// Generic salary routes - these MUST come AFTER the specific /Salary/Employees route
 router.get('/Salary/:schoolId/:employeeType/:employeeId', salaryController.getSalaryByEmployee);
 router.get('/Salary/Calculate/:salaryId', salaryController.calculateNetSalary);
 router.post('/Salary/Payment/:salaryId', salaryController.recordPayment);
@@ -338,10 +366,6 @@ router.get('/Salary/PaymentHistory/:salaryId', salaryController.getPaymentHistor
 router.delete('/Salary/:id', salaryController.deleteSalary);
 router.get('/Salary/Summary/:schoolId', salaryController.getSalarySummary);
 
-// New Salary Management Routes
-router.get('/Salary/Employees/:schoolId/:employeeType', asyncHandler(async (req, res) => {
-    return salaryController.getEmployeesWithSalaryStatus(req, res);
-}));
 router.post('/Salary/BulkPayment', salaryController.bulkSalaryPayment);
 router.get('/Salary/ByMonth/:schoolId/:month/:year', salaryController.getSalaryByMonthYear);
 router.put('/Salary/Update/:salaryId', salaryController.updateSalary);
