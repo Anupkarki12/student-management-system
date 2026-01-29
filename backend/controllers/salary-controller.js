@@ -62,6 +62,21 @@ const salaryController = {
                 status: 'active'
             });
             
+            // Calculate total allowances and deductions
+            const totalAllowances = 
+                (allowances?.houseRent || 0) +
+                (allowances?.medical || 0) +
+                (allowances?.transport || 0) +
+                (allowances?.other || 0);
+            
+            const totalDeductions = 
+                (deductions?.providentFund || 0) +
+                (deductions?.tax || 0) +
+                (deductions?.insurance || 0) +
+                (deductions?.other || 0);
+            
+            const netSalary = baseSalary + totalAllowances - totalDeductions;
+            
             if (existingSalary) {
                 existingSalary.baseSalary = baseSalary;
                 existingSalary.allowances = allowances || {};
@@ -69,6 +84,21 @@ const salaryController = {
                 existingSalary.effectiveDate = effectiveDate;
                 existingSalary.position = position;
                 await existingSalary.save();
+                
+                // Also update the employee's salary field in their schema
+                const salaryData = {
+                    baseSalary,
+                    allowances: allowances || {},
+                    deductions: deductions || {},
+                    netSalary
+                };
+                
+                if (employeeType === 'teacher') {
+                    await Teacher.findByIdAndUpdate(employeeId, { salary: salaryData });
+                } else if (employeeType === 'staff') {
+                    await Staff.findByIdAndUpdate(employeeId, { salary: salaryData });
+                }
+                
                 return res.status(200).json({ message: 'Salary updated successfully', salary: existingSalary });
             }
             
@@ -84,6 +114,21 @@ const salaryController = {
             });
             
             await salary.save();
+            
+            // Also update the employee's salary field in their schema
+            const salaryData = {
+                baseSalary,
+                allowances: allowances || {},
+                deductions: deductions || {},
+                netSalary
+            };
+            
+            if (employeeType === 'teacher') {
+                await Teacher.findByIdAndUpdate(employeeId, { salary: salaryData });
+            } else if (employeeType === 'staff') {
+                await Staff.findByIdAndUpdate(employeeId, { salary: salaryData });
+            }
+            
             res.status(201).json({ message: 'Salary created successfully', salary });
         } catch (error) {
             res.status(500).json({ error: error.message });
@@ -131,17 +176,17 @@ const salaryController = {
         try {
             const { schoolId } = req.params;
             
-            // Convert to ObjectId if valid
-            const schoolObjectId = this.isValidObjectId(schoolId)
+            // Convert to ObjectId if valid (use module-level function, not this.isValidObjectId)
+            const schoolObjectId = isValidObjectId(schoolId)
                 ? new mongoose.Types.ObjectId(schoolId)
                 : schoolId;
             
             const salaries = await Salary.find({ school: schoolObjectId, status: 'active' }).lean();
 
-            // Filter out corrupted records where employee is not a valid ObjectId
+            // Filter out corrupted records where employee is not a valid ObjectId (use module-level function)
             const validSalaries = salaries.filter(salary => {
                 const employeeId = salary.employee;
-                const isValid = this.isValidObjectId(employeeId);
+                const isValid = isValidObjectId(employeeId);
                 if (!isValid) {
                     console.warn(`⚠️ Skipping corrupted salary record ${salary._id}: employee field is "${employeeId}" (expected ObjectId)`);
                 }
@@ -386,6 +431,7 @@ const salaryController = {
     getEmployeesWithSalaryStatus: async (req, res) => {
         try {
             const { schoolId, employeeType } = req.params;
+            const { month, year } = req.query; // Accept month/year as query params
 
             if (!employeeType) {
                 return res.status(400).json({ error: "Employee type is required" });
@@ -407,22 +453,36 @@ const salaryController = {
                     .select("-password")
                     .lean();
 
-                employeeSalaries = await Salary.find({
+            // Build query for salary records - filter by month/year if provided
+                const salaryQuery = {
                     school: schoolObjectId,
                     employeeType: "teacher",
                     status: "active"
-                }).lean();
+                };
+                
+                // If month and year are provided, we need to show all employees with their salary status
+                // For employees who have salary records but no payment for this month, they should still appear
+                // So we don't filter by payment history in the salary query - we fetch all active salaries
+                
+                employeeSalaries = await Salary.find(salaryQuery).lean();
 
             } else if (type === "staff") {
                 employees = await Staff.find({ school: schoolObjectId })
                     .select("-password")
                     .lean();
 
-                employeeSalaries = await Salary.find({
+                // Build query for salary records - filter by month/year if provided
+                const salaryQuery = {
                     school: schoolObjectId,
                     employeeType: "staff",
                     status: "active"
-                }).lean();
+                };
+                
+                // If month and year are provided, we need to show all employees with their salary status
+                // For employees who have salary records but no payment for this month, they should still appear
+                // So we don't filter by payment history in the salary query - we fetch all active salaries
+                
+                employeeSalaries = await Salary.find(salaryQuery).lean();
             } else {
                 return res.status(400).json({ error: "Invalid employee type" });
             }
@@ -454,19 +514,102 @@ const salaryController = {
                 }
             });
 
-            const result = employees.map(emp => {
-                const salary = salaryMap.get(emp._id.toString());
+            // Helper function to calculate total allowances from salary
+            const calculateTotalAllowances = (salary) => {
+                if (!salary) return 0;
+                return (salary.allowances?.houseRent || 0) +
+                       (salary.allowances?.medical || 0) +
+                       (salary.allowances?.transport || 0) +
+                       (salary.allowances?.other || 0);
+            };
 
+            // Helper function to calculate total deductions from salary
+            const calculateTotalDeductions = (salary) => {
+                if (!salary) return 0;
+                return (salary.deductions?.providentFund || 0) +
+                       (salary.deductions?.tax || 0) +
+                       (salary.deductions?.insurance || 0) +
+                       (salary.deductions?.other || 0);
+            };
+
+            // Helper function to get payment status for specific month/year
+            const getPaymentStatusForMonth = (salary, queryMonth, queryYear) => {
+                if (!salary || !salary.paymentHistory || salary.paymentHistory.length === 0) {
+                    return { isPaid: false, lastPaid: null, currentMonthPaid: false };
+                }
+                
+                // If query month/year provided, check if paid for that specific month
+                if (queryMonth && queryYear) {
+                    const payment = salary.paymentHistory.find(
+                        p => p.month === queryMonth && p.year === parseInt(queryYear)
+                    );
+                    if (payment) {
+                        return { 
+                            isPaid: true, 
+                            lastPaid: { month: payment.month, year: payment.year, status: payment.status },
+                            currentMonthPaid: true,
+                            paymentAmount: payment.amount
+                        };
+                    }
+                    // If no payment found for this month, return null to indicate not paid
+                    return { 
+                        isPaid: false, 
+                        lastPaid: null,
+                        currentMonthPaid: false 
+                    };
+                }
+                
+                // Get the most recent payment regardless of month
+                const sortedPayments = [...salary.paymentHistory].sort(
+                    (a, b) => new Date(b.paymentDate) - new Date(a.paymentDate)
+                );
+                const lastPayment = sortedPayments[0];
+                return { 
+                    isPaid: true, 
+                    lastPaid: { month: lastPayment.month, year: lastPayment.year, status: lastPayment.status },
+                    currentMonthPaid: true,
+                    paymentAmount: lastPayment.amount
+                };
+            };
+
+            // Build employee salary data
+            const employeeSalaryData = employees.map(emp => {
+                const salary = salaryMap.get(emp._id.toString());
+                const totalAllowances = calculateTotalAllowances(salary);
+                const totalDeductions = calculateTotalDeductions(salary);
+                const netSalary = salary ? salary.baseSalary + totalAllowances - totalDeductions : 0;
+                
+                // Get payment status for the selected month/year
+                const paymentStatus = getPaymentStatusForMonth(salary, month, year);
+                
                 return {
                     _id: emp._id,
                     name: emp.name,
                     email: emp.email,
                     employeeType: type,
+                    position: salary?.position || emp.position || type,
                     baseSalary: salary?.baseSalary || 0,
-                    hasSalaryRecord: !!salary
+                    hasSalaryRecord: !!salary,
+                    salaryId: salary?._id || null,
+                    totalAllowances,
+                    totalDeductions,
+                    netSalary,
+                    lastPaid: paymentStatus.lastPaid,
+                    lastPaymentStatus: paymentStatus.currentMonthPaid ? 'paid' : (paymentStatus.lastPaid?.status || null),
+                    isPaidForSelectedMonth: paymentStatus.currentMonthPaid,
+                    paymentAmount: paymentStatus.paymentAmount || 0
                 };
             });
 
+            // Filter to show only employees who have been paid for the selected month/year
+            let result = employeeSalaryData;
+            
+            if (month && year) {
+                // Only show employees who have been paid for this month
+                result = employeeSalaryData.filter(emp => emp.isPaidForSelectedMonth);
+            }
+
+            console.log(`Returning ${result.length} employees for ${type}s, month: ${month}, year: ${year}`);
             return res.status(200).json(result);
 
         } catch (error) {
