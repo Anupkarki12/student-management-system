@@ -12,6 +12,32 @@ import {
     deleteDocumentFailed
 } from './documentSlice';
 
+/**
+ * Safely extracts a serializable error message from an error object.
+ * This prevents non-serializable values (like AxiosError) from being stored in Redux state.
+ * @param {any} error - The error object (typically from axios)
+ * @returns {string} - A serializable error message
+ */
+const extractErrorMessage = (error) => {
+    if (!error) return 'An unknown error occurred';
+    if (typeof error === 'string') return error;
+    
+    // Handle axios errors
+    if (error.response?.data?.error) return error.response.data.error;
+    if (error.response?.data?.message) return error.response.data.message;
+    if (error.response?.statusText) return error.response.statusText;
+    if (error.response?.status) return `Server error (${error.response.status})`;
+    
+    // Handle network errors
+    if (error.code === 'ECONNABORTED') return 'Request timed out. Please try again.';
+    if (error.code === 'ERR_NETWORK') return 'Unable to connect to server. Please check your connection.';
+    
+    // Fallback to message or generic error
+    if (error.message) return error.message;
+    
+    return 'An unknown error occurred';
+};
+
 // Get documents based on role
 export const getAllDocuments = (id, role, schoolId = null, classId = null) => async (dispatch) => {
     dispatch(getDocumentRequest());
@@ -34,7 +60,7 @@ export const getAllDocuments = (id, role, schoolId = null, classId = null) => as
             dispatch(getDocumentSuccess(result.data));
         }
     } catch (error) {
-        const errorMessage = error.response?.data?.message || error.message || "Error loading documents";
+        const errorMessage = extractErrorMessage(error);
         dispatch(getDocumentError(errorMessage));
     }
 };
@@ -55,11 +81,7 @@ export const addDocument = (formData, address) => async (dispatch) => {
             dispatch(addDocumentSuccess(result.data));
         }
     } catch (error) {
-        // Extract serializable error information
-        const errorMessage = error.response?.data?.message || 
-                           error.message || 
-                           error.toString() ||
-                           "Error uploading document";
+        const errorMessage = extractErrorMessage(error);
         console.error('Document upload error:', errorMessage);
         dispatch(addDocumentFailed(errorMessage));
     }
@@ -77,7 +99,7 @@ export const deleteDocument = (id, address) => async (dispatch) => {
             dispatch(deleteDocumentSuccess(result.data));
         }
     } catch (error) {
-        const errorMessage = error.response?.data?.message || error.message || "Error deleting document";
+        const errorMessage = extractErrorMessage(error);
         dispatch(deleteDocumentFailed(errorMessage));
     }
 };

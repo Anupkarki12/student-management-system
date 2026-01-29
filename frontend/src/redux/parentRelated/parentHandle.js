@@ -13,6 +13,32 @@ import {
     getError,
 } from './parentSlice';
 
+/**
+ * Safely extracts a serializable error message from an error object.
+ * This prevents non-serializable values (like AxiosError) from being stored in Redux state.
+ * @param {any} error - The error object (typically from axios)
+ * @returns {string} - A serializable error message
+ */
+const extractErrorMessage = (error) => {
+    if (!error) return 'An unknown error occurred';
+    if (typeof error === 'string') return error;
+    
+    // Handle axios errors
+    if (error.response?.data?.error) return error.response.data.error;
+    if (error.response?.data?.message) return error.response.data.message;
+    if (error.response?.statusText) return error.response.statusText;
+    if (error.response?.status) return `Server error (${error.response.status})`;
+    
+    // Handle network errors
+    if (error.code === 'ECONNABORTED') return 'Request timed out. Please try again.';
+    if (error.code === 'ERR_NETWORK') return 'Unable to connect to server. Please check your connection.';
+    
+    // Fallback to message or generic error
+    if (error.message) return error.message;
+    
+    return 'An unknown error occurred';
+};
+
 export const registerParent = (fields, role) => async (dispatch) => {
     dispatch(authRequest());
 
@@ -47,7 +73,7 @@ export const registerParent = (fields, role) => async (dispatch) => {
             dispatch(authFailed("Unknown error occurred"));
         }
     } catch (error) {
-        dispatch(authError(error));
+        dispatch(authError(extractErrorMessage(error)));
     }
 };
 
@@ -65,7 +91,7 @@ export const loginParent = (fields) => async (dispatch) => {
             dispatch(authFailed(result.data.message));
         }
     } catch (error) {
-        dispatch(authError(error));
+        dispatch(authError(extractErrorMessage(error)));
     }
 };
 
@@ -82,7 +108,7 @@ export const getParentDetails = (id) => async (dispatch) => {
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -95,7 +121,7 @@ export const getAllParents = (id) => async (dispatch) => {
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -108,7 +134,7 @@ export const getParentByStudent = (studentId) => async (dispatch) => {
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -123,7 +149,7 @@ export const deleteParent = (id) => async (dispatch) => {
             dispatch(getDeleteSuccess());
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -138,7 +164,7 @@ export const deleteParents = (id) => async (dispatch) => {
             dispatch(getDeleteSuccess());
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -153,7 +179,7 @@ export const updateParent = (fields, id) => async (dispatch) => {
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -166,7 +192,7 @@ export const linkStudentToParent = (parentId, studentId) => async (dispatch) => 
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -179,7 +205,7 @@ export const unlinkStudentFromParent = (parentId, studentId) => async (dispatch)
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -192,7 +218,7 @@ export const getStudentsByParent = (parentId) => async (dispatch) => {
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -205,7 +231,7 @@ export const getParentDashboard = (parentId) => async (dispatch) => {
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -233,7 +259,7 @@ export const uploadParentPhoto = (photo) => async (dispatch) => {
             return null;
         }
     } catch (error) {
-        dispatch(authError(error));
+        dispatch(authError(extractErrorMessage(error)));
         return null;
     }
 };

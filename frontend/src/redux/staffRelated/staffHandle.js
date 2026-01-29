@@ -15,6 +15,32 @@ import {
     underControl,
 } from './staffSlice';
 
+/**
+ * Safely extracts a serializable error message from an error object.
+ * This prevents non-serializable values (like AxiosError) from being stored in Redux state.
+ * @param {any} error - The error object (typically from axios)
+ * @returns {string} - A serializable error message
+ */
+const extractErrorMessage = (error) => {
+    if (!error) return 'An unknown error occurred';
+    if (typeof error === 'string') return error;
+    
+    // Handle axios errors
+    if (error.response?.data?.error) return error.response.data.error;
+    if (error.response?.data?.message) return error.response.data.message;
+    if (error.response?.statusText) return error.response.statusText;
+    if (error.response?.status) return `Server error (${error.response.status})`;
+    
+    // Handle network errors
+    if (error.code === 'ECONNABORTED') return 'Request timed out. Please try again.';
+    if (error.code === 'ERR_NETWORK') return 'Unable to connect to server. Please check your connection.';
+    
+    // Fallback to message or generic error
+    if (error.message) return error.message;
+    
+    return 'An unknown error occurred';
+};
+
 // Simple Staff API functions (without login/authentication)
 
 export const addSimpleStaff = (fields, schoolId) => async (dispatch) => {
@@ -61,7 +87,7 @@ export const addSimpleStaff = (fields, schoolId) => async (dispatch) => {
     } catch (error) {
         console.error('[Staff] Error adding staff:', error);
         console.error('[Staff] Error response:', error.response?.data);
-        dispatch(authError(error));
+        dispatch(authError(extractErrorMessage(error)));
     }
 };
 
@@ -74,7 +100,7 @@ export const getAllSimpleStaffs = (schoolId) => async (dispatch) => {
             dispatch(getSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -87,7 +113,7 @@ export const getSimpleStaffDetails = (id) => async (dispatch) => {
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -102,7 +128,7 @@ export const deleteSimpleStaff = (id) => async (dispatch) => {
             dispatch(getFailed(result.data.message));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -117,7 +143,7 @@ export const deleteAllSimpleStaffs = (schoolId) => async (dispatch) => {
             dispatch(getFailed(result.data.message));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -155,7 +181,7 @@ export const registerStaff = (fields, role) => async (dispatch) => {
             dispatch(authFailed("Unknown error occurred"));
         }
     } catch (error) {
-        dispatch(authError(error));
+        dispatch(authError(extractErrorMessage(error)));
     }
 };
 
@@ -173,7 +199,7 @@ export const loginStaff = (fields) => async (dispatch) => {
             dispatch(authFailed(result.data.message));
         }
     } catch (error) {
-        dispatch(authError(error));
+        dispatch(authError(extractErrorMessage(error)));
     }
 };
 
@@ -190,7 +216,7 @@ export const getStaffDetails = (id) => async (dispatch) => {
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -203,7 +229,7 @@ export const getAllStaffs = (id) => async (dispatch) => {
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -218,7 +244,7 @@ export const deleteStaff = (id) => async (dispatch) => {
             dispatch(getDeleteSuccess());
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -233,7 +259,7 @@ export const deleteStaffs = (id) => async (dispatch) => {
             dispatch(getDeleteSuccess());
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -248,7 +274,7 @@ export const updateStaff = (fields, id) => async (dispatch) => {
             dispatch(doneSuccess(result.data));
         }
     } catch (error) {
-        dispatch(getError(error));
+        dispatch(getError(extractErrorMessage(error)));
     }
 };
 
@@ -276,7 +302,7 @@ export const uploadStaffPhoto = (photo) => async (dispatch) => {
             return null;
         }
     } catch (error) {
-        dispatch(authError(error));
+        dispatch(authError(extractErrorMessage(error)));
         return null;
     }
 };
@@ -292,7 +318,7 @@ export const checkStaffDatabaseHealth = () => async (dispatch) => {
         return result.data;
     } catch (error) {
         console.error('[Staff] Database health check failed:', error);
-        return { database: 'error', error: error.message };
+        return { database: 'error', error: extractErrorMessage(error) };
     }
 };
 

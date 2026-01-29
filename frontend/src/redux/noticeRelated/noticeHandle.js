@@ -30,8 +30,19 @@ export const getAllNotices = (id, address) => async (dispatch) => {
         if (error.response) {
             console.error(`📨 Response status: ${error.response.status}`);
             console.error(`📄 Response data:`, error.response.data);
+            
+            // Extract serializable error message
+            const errorMessage = error.response.data?.message 
+                || error.response.data?.error 
+                || `Server error (${error.response.status})`;
+            dispatch(getError(errorMessage));
+        } else if (error.request) {
+            // Network error (no response received)
+            dispatch(getError('Unable to connect to server. Please check your connection.'));
+        } else {
+            // Something else went wrong
+            dispatch(getError(error.message || 'An unknown error occurred'));
         }
-        dispatch(getError(error));
     }
 }
 

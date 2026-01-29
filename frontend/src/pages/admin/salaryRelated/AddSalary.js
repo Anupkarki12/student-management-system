@@ -580,9 +580,11 @@ const AddSalary = () => {
 
             {/* Salary Setup Dialog */}
             <Dialog open={openSalaryDialog} onClose={() => setOpenSalaryDialog(false)} maxWidth="md" fullWidth>
-                <DialogTitle>
-                    Salary Setup - {selectedEmployee?.name}
-                    <Typography variant="subtitle2" color="textSecondary">
+                <DialogTitle component="div">
+                    <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                        Salary Setup - {selectedEmployee?.name}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" component="div">
                         {selectedEmployee?.position}
                     </Typography>
                 </DialogTitle>
