@@ -20,6 +20,7 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import QuizIcon from '@mui/icons-material/Quiz';
 import GroupIcon from '@mui/icons-material/Group';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 
 const SideBar = () => {
     const location = useLocation();
@@ -86,12 +87,7 @@ const SideBar = () => {
                     </ListItemIcon>
                     <ListItemText primary="Salary" />
                 </ListItemButton>
-                <ListItemButton component={Link} to="/Admin/salary/add">
-                    <ListItemIcon>
-                        <PaymentIcon color={location.pathname === "/Admin/salary/add" ? 'primary' : 'inherit'} />
-                    </ListItemIcon>
-                    <ListItemText primary="Add Salary" />
-                </ListItemButton>
+
                 <ListItemButton component={Link} to="/Admin/exam-routine">
                     <ListItemIcon>
                         <QuizIcon color={location.pathname.startsWith("/Admin/exam-routine") ? 'primary' : 'inherit'} />
@@ -104,11 +100,12 @@ const SideBar = () => {
                     </ListItemIcon>
                     <ListItemText primary="Notes" />
                 </ListItemButton>
-                <ListItemButton component={Link} to="/Admin/allmarks">
+                
+                <ListItemButton component={Link} to="/Admin/results">
                     <ListItemIcon>
-                        <GradeIcon color={location.pathname.startsWith("/Admin/allmarks") ? 'primary' : 'inherit'} />
+                        <AssessmentIcon color={location.pathname.startsWith("/Admin/results") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
-                    <ListItemText primary="All Marks" />
+                    <ListItemText primary="Results" />
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Admin/attendance">
                     <ListItemIcon>
@@ -121,12 +118,6 @@ const SideBar = () => {
                         <AnnouncementOutlinedIcon color={location.pathname.startsWith("/Admin/notices") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Notices" />
-                </ListItemButton>
-                <ListItemButton component={Link} to="/Admin/addnotice">
-                    <ListItemIcon>
-                        <AddCircleOutlineIcon color={location.pathname === "/Admin/addnotice" ? 'primary' : 'inherit'} />
-                    </ListItemIcon>
-                    <ListItemText primary="Add Notice" />
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Admin/complains">
                     <ListItemIcon>

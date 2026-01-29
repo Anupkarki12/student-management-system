@@ -213,6 +213,19 @@ const asyncHandler = (fn) => (req, res, next) => {
     });
 };
 
+// backend/index.js or app.js
+ 
+app.use(express.static(path.join(__dirname, "../frontend/build")));
+
+app.get("*", (req, res) => {
+  res.sendFile(
+    path.join(__dirname, "../frontend/build/index.html")
+  );
+})
+
+
+
+
 app.listen(PORT, () => {
     console.log(`Server started at port no. ${PORT}`)
     console.log(`Health check: http://localhost:${PORT}/health`)

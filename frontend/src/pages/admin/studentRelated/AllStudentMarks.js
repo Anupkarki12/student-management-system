@@ -6,12 +6,10 @@ import {
     TableRow, Chip, FormControl, InputLabel, Select, MenuItem,
     TextField, Alert, IconButton
 } from '@mui/material';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import PrintIcon from '@mui/icons-material/Print';
+ import PrintIcon from '@mui/icons-material/Print';
 import axios from 'axios';
 import NepaliDatePicker from '../../../components/NepaliDatePicker';
-import { formatNepaliDate } from '../../../utils/nepaliDate';
-
+ 
 const AllStudentMarks = () => {
     const { currentUser } = useSelector((state) => state.user);
 
@@ -202,9 +200,9 @@ const AllStudentMarks = () => {
                                 >
                                     <MenuItem value="">All Exam Types</MenuItem>
                                     <MenuItem value="Test">Test</MenuItem>
-                                    <MenuItem value="Monthly">Monthly</MenuItem>
-                                    <MenuItem value="Quarterly">Quarterly</MenuItem>
-                                    <MenuItem value="Half-Yearly">Half-Yearly</MenuItem>
+                                    <MenuItem value="First Terminal">First Terminal</MenuItem>
+                                    <MenuItem value="Second Terminal">Second Terminal</MenuItem>
+                                    <MenuItem value="Mid-Terminal">Mid-Terminal</MenuItem>
                                     <MenuItem value="Annual">Annual</MenuItem>
                                 </Select>
                             </FormControl>

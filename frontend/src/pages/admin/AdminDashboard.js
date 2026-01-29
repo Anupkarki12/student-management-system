@@ -54,6 +54,7 @@ import AddRoutine from './routineRelated/AddRoutine';
 import ShowRoutines from './routineRelated/ShowRoutines';
 import AdminExamRoutine from './examRoutineRelated/AdminExamRoutine';
 import AdminNotes from './notesRelated/AdminNotes';
+import AdminResults from './resultRelated/AdminResults';
 
 // Staff imports
 import AddStaff from './staffRelated/AddStaff';
@@ -174,6 +175,9 @@ const AdminDashboard = () => {
 
                     {/* Marks */}
                     <Route path="/Admin/allmarks" element={<AllStudentMarks />} />
+
+                    {/* Results */}
+                    <Route path="/Admin/results" element={<AdminResults />} />
 
                     {/* Attendance */}
                     <Route path="/Admin/attendance" element={<ClassAttendance />} />

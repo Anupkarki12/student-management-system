@@ -28,7 +28,7 @@ const marksSchema = new mongoose.Schema({
     },
     examType: {
         type: String,
-        enum: ['Monthly', 'Quarterly', 'Half-Yearly', 'Annual', 'Test'],
+        enum: ['First Terminal', 'Second Terminal', 'Mid-Terminal', 'Annual', 'Test'],
         required: true
     },
     examDate: {

@@ -292,6 +292,16 @@ const TeacherMarks = () => {
                         </FormControl>
                     </Grid>
                     <Grid item xs={12} sm={6} md={3}>
+                        <TextField
+                            fullWidth
+                            label="Max Marks (User Input)"
+                            type="number"
+                            value={maxMarks}
+                            onChange={(e) => setMaxMarks(e.target.value)}
+                            helperText="Enter max marks for this exam"
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
                         <FormControl fullWidth>
                             <InputLabel>Exam Type</InputLabel>
                             <Select
@@ -300,9 +310,9 @@ const TeacherMarks = () => {
                                 onChange={(e) => setExamType(e.target.value)}
                             >
                                 <MenuItem value="Test">Test</MenuItem>
-                                <MenuItem value="Monthly">Monthly</MenuItem>
-                                <MenuItem value="Quarterly">Quarterly</MenuItem>
-                                <MenuItem value="Half-Yearly">Half-Yearly</MenuItem>
+                                <MenuItem value="First Terminal">First Terminal</MenuItem>
+                                <MenuItem value="Second Terminal">Second Terminal</MenuItem>
+                                <MenuItem value="Mid-Terminal">Mid-Terminal</MenuItem>
                                 <MenuItem value="Annual">Annual</MenuItem>
                             </Select>
                         </FormControl>
@@ -312,15 +322,6 @@ const TeacherMarks = () => {
                             label="Exam Date"
                             value={examDate}
                             onChange={(date) => setExamDate(date)}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <TextField
-                            fullWidth
-                            label="Max Marks"
-                            type="number"
-                            value={maxMarks}
-                            onChange={(e) => setMaxMarks(e.target.value)}
                         />
                     </Grid>
                 </Grid>
