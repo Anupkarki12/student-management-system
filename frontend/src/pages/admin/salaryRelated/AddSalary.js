@@ -7,11 +7,12 @@ import {
     TextField, MenuItem, Select, FormControl, InputLabel, Avatar,
     IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
     Grid, Card, CardContent, LinearProgress, Alert, Snackbar,
-    Tooltip, Divider
+    Tooltip, Divider, useTheme, useMediaQuery
 } from '@mui/material';
 import {
     Person, AttachMoney, CheckCircle, Pending, CalendarMonth,
-    FilterList, Payment, ArrowBack, Info, Refresh
+    FilterList, Payment, ArrowBack, Info, Refresh, Today,
+    Event, ArrowDropDown, ArrowDropUp
 } from '@mui/icons-material';
 import {
     getEmployeesWithSalaryStatus,
@@ -19,7 +20,7 @@ import {
     createOrUpdateSalary
 } from '../../../redux/salaryRelated/salaryHandle';
 import Popup from '../../../components/Popup';
-import { underControl } from '../../../redux/salaryRelated/salarySlice';
+import { underControl, clearEmployees } from '../../../redux/salaryRelated/salarySlice';
 
 // Month options
 const months = [
@@ -31,9 +32,22 @@ const months = [
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
 
+// Helper function to get month name from index
+const getMonthName = (monthIndex) => {
+    return months[monthIndex] || months[new Date().getMonth()];
+};
+
+// Helper to check if selected period is current month/year
+const isCurrentPeriod = (month, year) => {
+    const currentMonth = months[new Date().getMonth()];
+    return month === currentMonth && year === currentYear;
+};
+
 const AddSalary = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     const { currentUser } = useSelector(state => state.user);
     const { employeesWithSalary, loading, error, success, response } = useSelector(state => state.salary);
@@ -61,19 +75,34 @@ const AddSalary = () => {
     const [showPopup, setShowPopup] = useState(false);
     const [message, setMessage] = useState('');
     const [processing, setProcessing] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+
+    // Get current date formatted
+    const currentDate = new Date();
+    const formattedDate = currentDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    const shortDate = currentDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
 
     const schoolId = currentUser?._id;
 
     useEffect(() => {
         if (schoolId) {
-            console.log('Fetching employees for school:', schoolId);
+            console.log('Fetching employees for school:', schoolId, 'month:', month, 'year:', year);
             fetchEmployees();
         } else {
             console.error('School ID not available:', currentUser);
             setMessage('Error: School ID is missing. Please log in again.');
             setShowPopup(true);
         }
-    }, [schoolId, tabValue, currentUser]);
+    }, [schoolId, tabValue, month, year, currentUser]);
 
     useEffect(() => {
         if (success) {
@@ -81,11 +110,16 @@ const AddSalary = () => {
             setShowPopup(true);
             dispatch(underControl());
             setProcessing(false);
+            // Clear selected employees and refresh data without browser refresh
             setSelectedEmployees([]);
             setSelectAll(false);
-            fetchEmployees();
+            // Clear employees state and fetch fresh data
+            dispatch(clearEmployees());
+            setTimeout(() => {
+                dispatch(getEmployeesWithSalaryStatus(schoolId, tabValue === 0 ? 'teacher' : 'staff', month, year));
+            }, 50);
         }
-    }, [success, response, dispatch]);
+    }, [success, response, dispatch, schoolId, tabValue, month, year]);
 
     useEffect(() => {
         if (error) {
@@ -97,7 +131,7 @@ const AddSalary = () => {
 
     const fetchEmployees = () => {
         const employeeType = tabValue === 0 ? 'teacher' : 'staff';
-        console.log(`Fetching ${employeeType}s for school: ${schoolId}`);
+        console.log(`Fetching ${employeeType}s for school: ${schoolId}, month: ${month}, year: ${year}`);
         
         if (!schoolId) {
             console.error('Cannot fetch employees: schoolId is missing');
@@ -106,7 +140,13 @@ const AddSalary = () => {
             return;
         }
         
-        dispatch(getEmployeesWithSalaryStatus(schoolId, employeeType));
+        // Clear current employees before fetching new data (fix for old data display issue)
+        dispatch(clearEmployees());
+        
+        // Small delay to allow state to clear before new data arrives
+        setTimeout(() => {
+            dispatch(getEmployeesWithSalaryStatus(schoolId, employeeType, month, year));
+        }, 50);
     };
 
     const handleTabChange = (event, newValue) => {
@@ -192,11 +232,27 @@ const AddSalary = () => {
             }
         };
 
+        console.log('Creating/updating salary for employee:', selectedEmployee?._id);
+        console.log('Salary data:', salaryData);
+
         try {
-            await dispatch(createOrUpdateSalary(salaryData));
+            const result = await dispatch(createOrUpdateSalary(salaryData));
+            console.log('Salary create/update result:', result);
+            
+            // Close dialog and reset states only after successful response
             setOpenSalaryDialog(false);
-        } catch (err) {
             setProcessing(false);
+            
+            // Show success message
+            setMessage(selectedEmployee?.hasSalaryRecord ? 'Salary updated successfully' : 'Salary created successfully');
+            setShowPopup(true);
+            
+            // Refresh employee list to show updated salary
+            fetchEmployees();
+        } catch (err) {
+            console.error('Error creating/updating salary:', err);
+            setProcessing(false);
+            // Error will be shown via the error useEffect
         }
     };
 
@@ -231,9 +287,25 @@ const AddSalary = () => {
         };
 
         try {
-            await dispatch(bulkSalaryPayment(paymentData));
-        } catch (err) {
+            const result = await dispatch(bulkSalaryPayment(paymentData));
+            console.log('Bulk payment result:', result);
+            
+            // Reset processing state
             setProcessing(false);
+            setSelectedEmployees([]);
+            setSelectAll(false);
+            
+            // Show success message
+            setMessage(`Payment successful for ${selectedEmpData.length} employees`);
+            setShowPopup(true);
+            
+            // Refresh employee list immediately to show updated status
+            fetchEmployees();
+        } catch (err) {
+            console.error('Error processing bulk payment:', err);
+            setProcessing(false);
+            setMessage('Payment failed. Please try again.');
+            setShowPopup(true);
         }
     };
 
@@ -262,9 +334,24 @@ const AddSalary = () => {
         };
 
         try {
-            await dispatch(bulkSalaryPayment(paymentData));
-        } catch (err) {
+            const result = await dispatch(bulkSalaryPayment(paymentData));
+            console.log('Single payment result:', result);
+            
+            // Reset processing state
             setProcessing(false);
+            setSelectedEmployee(null);
+            
+            // Show success message
+            setMessage(`Payment successful for ${selectedEmployee.name}`);
+            setShowPopup(true);
+            
+            // Refresh employee list immediately to show updated status
+            fetchEmployees();
+        } catch (err) {
+            console.error('Error processing single payment:', err);
+            setProcessing(false);
+            setMessage('Payment failed. Please try again.');
+            setShowPopup(true);
         }
     };
 
@@ -336,34 +423,127 @@ const AddSalary = () => {
                 </Tooltip>
             </Box>
 
-            {/* Month/Year Selection Card */}
-            <Card sx={{ mb: 3 }}>
-                <CardContent>
-                    <Grid container spacing={2} alignItems="center">
+            {/* Enhanced Month/Year Selection Card with Current Date Display */}
+            <Card sx={{ 
+                mb: 3, 
+                background: isCurrentPeriod(month, year) 
+                    ? 'linear-gradient(135deg, #081346 0%, #764ba2 100%)' 
+                    : 'linear-gradient(135deg, #2d3436 0%, #636e72 100%)',
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden'
+            }}>
+                <Box sx={{ position: 'absolute', top: -20, right: -20, opacity: 0.1 }}>
+                    <CalendarMonth sx={{ fontSize: 120 }} />
+                </Box>
+                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                    <Grid container spacing={3} alignItems="center">
+                        {/* Current Date Display */}
                         <Grid item xs={12} md={4}>
-                            <Typography variant="subtitle2" color="textSecondary">
-                                <CalendarMonth sx={{ verticalAlign: 'middle', mr: 1 }} />
-                                Payment Period
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <Today sx={{ fontSize: 24 }} />
+                                <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                                    Current Date
+                                </Typography>
+                            </Box>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Event sx={{ fontSize: 20 }} />
+                                {isMobile ? shortDate : formattedDate}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                                <FormControl size="small" sx={{ minWidth: 120 }}>
+                            {isCurrentPeriod(month, year) && (
+                                <Chip 
+                                    label="Current Month" 
+                                    size="small" 
+                                    sx={{ 
+                                        mt: 1, 
+                                        bgcolor: 'rgba(255,255,255,0.2)', 
+                                        color: 'white',
+                                        '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
+                                    }}
+                                    icon={<CheckCircle sx={{ color: '#4caf50 !important' }} />}
+                                />
+                            )}
+                        </Grid>
+
+                        {/* Payment Period Selector */}
+                        <Grid item xs={12} md={4}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <CalendarMonth sx={{ fontSize: 24 }} />
+                                <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                                    Payment Period
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <FormControl 
+                                    size="small" 
+                                    sx={{ 
+                                        minWidth: 130,
+                                        '& .MuiOutlinedInput-root': {
+                                            bgcolor: 'rgba(255,255,255,0.15)',
+                                            color: 'white',
+                                            '& .MuiSelect-icon': { color: 'white' },
+                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' },
+                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }
+                                        },
+                                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
+                                        '& .MuiInputLabel-root.Mui-focused': { color: 'white' }
+                                    }}
+                                >
                                     <InputLabel>Month</InputLabel>
                                     <Select
                                         value={month}
                                         label="Month"
                                         onChange={(e) => setMonth(e.target.value)}
+                                        MenuProps={{
+                                            PaperProps: {
+                                                sx: {
+                                                    bgcolor: 'white',
+                                                    color: 'text.primary',
+                                                    '& .MuiMenuItem-root:hover': {
+                                                        bgcolor: 'rgba(102, 126, 234, 0.1)'
+                                                    }
+                                                }
+                                            }
+                                        }}
                                     >
                                         {months.map((m) => (
                                             <MenuItem key={m} value={m}>{m}</MenuItem>
                                         ))}
                                     </Select>
                                 </FormControl>
-                                <FormControl size="small" sx={{ minWidth: 100 }}>
+                                <FormControl 
+                                    size="small" 
+                                    sx={{ 
+                                        minWidth: 100,
+                                        '& .MuiOutlinedInput-root': {
+                                            bgcolor: 'rgba(255,255,255,0.15)',
+                                            color: 'white',
+                                            '& .MuiSelect-icon': { color: 'white' },
+                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' },
+                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }
+                                        },
+                                        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.8)' },
+                                        '& .MuiInputLabel-root.Mui-focused': { color: 'white' }
+                                    }}
+                                >
                                     <InputLabel>Year</InputLabel>
                                     <Select
                                         value={year}
                                         label="Year"
                                         onChange={(e) => setYear(e.target.value)}
+                                        MenuProps={{
+                                            PaperProps: {
+                                                sx: {
+                                                    bgcolor: 'white',
+                                                    color: 'text.primary',
+                                                    '& .MuiMenuItem-root:hover': {
+                                                        bgcolor: 'rgba(102, 126, 234, 0.1)'
+                                                    }
+                                                }
+                                            }
+                                        }}
                                     >
                                         {years.map((y) => (
                                             <MenuItem key={y} value={y}>{y}</MenuItem>
@@ -371,26 +551,76 @@ const AddSalary = () => {
                                     </Select>
                                 </FormControl>
                             </Box>
+                            {/* Quick Selection Buttons */}
+                            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => {
+                                        setMonth(months[new Date().getMonth()]);
+                                        setYear(currentYear);
+                                    }}
+                                    sx={{
+                                        color: 'white',
+                                        borderColor: 'rgba(255,255,255,0.5)',
+                                        fontSize: '0.75rem',
+                                        py: 0.5,
+                                        '&:hover': {
+                                            borderColor: 'white',
+                                            bgcolor: 'rgba(255,255,255,0.1)'
+                                        }
+                                    }}
+                                >
+                                    Current Month
+                                </Button>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => {
+                                        const lastMonthIndex = new Date().getMonth() - 1;
+                                        const lastMonth = lastMonthIndex >= 0 ? months[lastMonthIndex] : months[11];
+                                        const lastMonthYear = lastMonthIndex >= 0 ? currentYear : currentYear - 1;
+                                        setMonth(lastMonth);
+                                        setYear(lastMonthYear);
+                                    }}
+                                    sx={{
+                                        color: 'white',
+                                        borderColor: 'rgba(255,255,255,0.5)',
+                                        fontSize: '0.75rem',
+                                        py: 0.5,
+                                        '&:hover': {
+                                            borderColor: 'white',
+                                            bgcolor: 'rgba(255,255,255,0.1)'
+                                        }
+                                    }}
+                                >
+                                    Last Month
+                                </Button>
+                            </Box>
                         </Grid>
-                        <Grid item xs={12} md={4}>
-                            <Typography variant="subtitle2" color="textSecondary">
+
+                        {/* Employee Summary */}
+                        <Grid item xs={12} md={2}>
+                            <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
                                 <FilterList sx={{ verticalAlign: 'middle', mr: 1 }} />
-                                Employee Summary
+                                {tabValue === 0 ? 'Teachers' : 'Staff'}
                             </Typography>
-                            <Typography variant="h6" sx={{ mt: 1 }}>
-                                {employeesWithSalary.length} {tabValue === 0 ? 'Teachers' : 'Staff'}
+                            <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                                {employeesWithSalary.length}
                             </Typography>
                         </Grid>
-                        <Grid item xs={12} md={4}>
+
+                        {/* Selected Summary */}
+                        <Grid item xs={12} md={2}>
                             {selectedEmployees.length > 0 && (
                                 <Box sx={{ textAlign: 'right' }}>
-                                    <Typography variant="subtitle2" color="textSecondary">
+                                    <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
                                         Selected for Payment
                                     </Typography>
-                                    <Typography variant="h6" color="primary">
+                                    <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
                                         {selectedEmployees.length} employees
                                     </Typography>
-                                    <Typography variant="body2" color="success.main" sx={{ fontWeight: 'bold' }}>
+                                    <Typography variant="body2" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
                                         Total: {formatCurrency(getSelectedTotal())}
                                     </Typography>
                                 </Box>
@@ -435,8 +665,8 @@ const AddSalary = () => {
                     indicatorColor="primary"
                     textColor="primary"
                 >
-                    <Tab label={`Teachers (${employeesWithSalary.length})`} icon={<Person />} iconPosition="start" />
-                    <Tab label={`Staff (${employeesWithSalary.length})`} icon={<Person />} iconPosition="start" />
+                    <Tab label={`Teachers `} icon={<Person />} iconPosition="start" />
+                    <Tab label={`Staff`} icon={<Person />} iconPosition="start" />
                 </Tabs>
             </Paper>
 

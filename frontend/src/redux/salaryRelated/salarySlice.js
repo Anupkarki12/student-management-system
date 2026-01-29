@@ -140,6 +140,13 @@ const salarySlice = createSlice({
             state.error = null;
             state.success = false;
             state.status = 'idle';
+        },
+
+        // Clear employees list (for when filters change)
+        clearEmployees: (state) => {
+            state.employeesWithSalary = [];
+            state.loading = false;
+            state.error = null;
         }
     }
 });
@@ -167,7 +174,8 @@ export const {
     deleteSalarySuccess,
     deleteSalaryFailed,
     resetSalary,
-    underControl
+    underControl,
+    clearEmployees
 } = salarySlice.actions;
 
 export default salarySlice.reducer;

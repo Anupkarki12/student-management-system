@@ -51,7 +51,7 @@ const extractErrorMessage = (error) => {
 };
 
 // Get employees (teachers/staff) with their salary status
-export const getEmployeesWithSalaryStatus = (schoolId, employeeType) => async (dispatch) => {
+export const getEmployeesWithSalaryStatus = (schoolId, employeeType, month, year) => async (dispatch) => {
     dispatch(getEmployeesRequest());
 
     // Validate inputs
@@ -67,8 +67,16 @@ export const getEmployeesWithSalaryStatus = (schoolId, employeeType) => async (d
         return;
     }
 
-    const apiUrl = `${process.env.REACT_APP_BASE_URL}/Salary/Employees/${schoolId}/${employeeType}`;
-    console.log(`Fetching employees for school: ${schoolId}, type: ${employeeType}`);
+    // Build URL with query params for month/year
+    let apiUrl = `${process.env.REACT_APP_BASE_URL}/Salary/Employees/${schoolId}/${employeeType}`;
+    const queryParams = [];
+    if (month) queryParams.push(`month=${encodeURIComponent(month)}`);
+    if (year) queryParams.push(`year=${encodeURIComponent(year)}`);
+    if (queryParams.length > 0) {
+        apiUrl += `?${queryParams.join('&')}`;
+    }
+
+    console.log(`Fetching employees for school: ${schoolId}, type: ${employeeType}, month: ${month}, year: ${year}`);
     console.log(`API URL: ${apiUrl}`);
 
     try {
@@ -143,8 +151,8 @@ export const createOrUpdateSalary = (salaryData) => async (dispatch) => {
     try {
         const result = await axios.post(`${process.env.REACT_APP_BASE_URL}/Salary/Create`, salaryData);
         if (result.data) {
+            // Don't call underControl() here - let the component handle the success state
             dispatch(paymentSuccess(result.data));
-            dispatch(underControl());
             return result.data;
         }
     } catch (error) {

@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSimpleStaffDetails } from '../../../redux/staffRelated/staffHandle';
-import { Paper, Box, Typography, Avatar, Grid, Chip, Divider, Button } from '@mui/material';
+import { Paper, Box, Typography, Avatar, Grid, Chip, Divider, Button, Card, CardContent } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import WorkIcon from '@mui/icons-material/Work';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 
 const StaffDetails = () => {
     const navigate = useNavigate();
@@ -44,6 +45,16 @@ const StaffDetails = () => {
         );
     }
 
+    const formatCurrency = (amount) => {
+        if (amount === undefined || amount === null) return 'NPR 0';
+        return new Intl.NumberFormat('en-NP', {
+            style: 'currency',
+            currency: 'NPR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount);
+    };
+
     return (
         <Box sx={{ p: 3 }}>
             <Button 
@@ -77,6 +88,15 @@ const StaffDetails = () => {
                             label={staff.position} 
                             color="primary" 
                         />
+                        <Button 
+                            variant="contained" 
+                            color="success"
+                            startIcon={<AttachMoneyIcon />}
+                            sx={{ mt: 2 }}
+                            onClick={() => navigate("/Admin/salary")}
+                        >
+                            Manage Salary
+                        </Button>
                     </Grid>
 
                     {/* Information Section */}
@@ -111,6 +131,78 @@ const StaffDetails = () => {
                                 </Box>
                             </Grid>
                         </Grid>
+
+                        <Divider sx={{ my: 3 }} />
+
+                        {/* Salary Information */}
+                        <Typography variant="h6" gutterBottom sx={{ borderBottom: '2px solid #7f56da', pb: 1 }}>
+                            Salary Information
+                        </Typography>
+
+                        <Card sx={{ mt: 2, bgcolor: '#f5f5f5' }}>
+                            <CardContent>
+                                {staff.salary && staff.salary.baseSalary > 0 ? (
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={12} sm={6}>
+                                            <Typography variant="subtitle2" color="textSecondary">
+                                                Base Salary
+                                            </Typography>
+                                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                                                {formatCurrency(staff.salary.baseSalary)}
+                                            </Typography>
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                            <Typography variant="subtitle2" color="textSecondary">
+                                                Net Salary
+                                            </Typography>
+                                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                                                {formatCurrency(staff.salary.netSalary || staff.salary.baseSalary)}
+                                            </Typography>
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                            <Typography variant="subtitle2" color="textSecondary">
+                                                Allowances
+                                            </Typography>
+                                            <Typography variant="body1" color="success.main">
+                                                +{formatCurrency(
+                                                    (staff.salary.allowances?.houseRent || 0) +
+                                                    (staff.salary.allowances?.medical || 0) +
+                                                    (staff.salary.allowances?.transport || 0) +
+                                                    (staff.salary.allowances?.other || 0)
+                                                )}
+                                            </Typography>
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                            <Typography variant="subtitle2" color="textSecondary">
+                                                Deductions
+                                            </Typography>
+                                            <Typography variant="body1" color="error.main">
+                                                -{formatCurrency(
+                                                    (staff.salary.deductions?.providentFund || 0) +
+                                                    (staff.salary.deductions?.tax || 0) +
+                                                    (staff.salary.deductions?.insurance || 0) +
+                                                    (staff.salary.deductions?.other || 0)
+                                                )}
+                                            </Typography>
+                                        </Grid>
+                                    </Grid>
+                                ) : (
+                                    <Box sx={{ textAlign: 'center', py: 2 }}>
+                                        <Typography color="textSecondary" gutterBottom>
+                                            No salary record found
+                                        </Typography>
+                                        <Button 
+                                            variant="contained" 
+                                            color="primary"
+                                            startIcon={<AttachMoneyIcon />}
+                                            onClick={() => navigate("/Admin/salary")}
+                                        >
+                                            Set Up Salary
+                                        </Button>
+                                    </Box>
+                                )}
+                            </CardContent>
+                        </Card>
 
                         <Divider sx={{ my: 3 }} />
 

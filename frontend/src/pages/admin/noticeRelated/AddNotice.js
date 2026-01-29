@@ -5,7 +5,6 @@ import { addStuff } from '../../../redux/userRelated/userHandle';
 import { underControl } from '../../../redux/userRelated/userSlice';
 import { CircularProgress, TextField, Button, Paper, Typography, Box } from '@mui/material';
 import Popup from '../../../components/Popup';
-import NepaliDatePicker from '../../../components/NepaliDatePicker';
 
 const AddNotice = () => {
   const dispatch = useDispatch();
@@ -15,7 +14,7 @@ const AddNotice = () => {
 
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const adminID = currentUser._id
 
   const [loader, setLoader] = useState(false);
@@ -71,11 +70,16 @@ const AddNotice = () => {
             rows={3}
           />
 
-          <NepaliDatePicker
+          <TextField
+            fullWidth
+            type="date"
             label="Date"
             value={date}
-            onChange={(newDate) => setDate(newDate)}
+            onChange={(event) => setDate(event.target.value)}
             required
+            margin="normal"
+            variant="outlined"
+            InputLabelProps={{ shrink: true }}
           />
 
           <Button
