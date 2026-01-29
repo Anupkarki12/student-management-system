@@ -192,15 +192,21 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
             return;
         }
 
-        const exportData = studentsList.map((student) => ({
-            'Roll Number': student.rollNum,
-            'Name': student.name,
-            'Class': selectedClass?.sclassName || 'N/A',
-            'Email': student.email || '-',
-            'Phone': student.phone || '-',
-            'Address': student.address || '-',
-            'Created At': student.createdAt ? new Date(student.createdAt).toLocaleDateString() : '-'
-        }));
+        const exportData = studentsList.map((student) => {
+            const parent = student.parent;
+            return {
+                'Student ID': student._id || '-',
+                'Class': student.sclassName?.sclassName || 'N/A',
+                'Section': student.sclassName?.section || '-',
+                'Roll No': student.rollNum || '-',
+                'Name': student.name || '-',
+                'Address': student.address || '-',
+                'DOB': student.dob || '-',
+                'Parent ID': parent?._id ? String(parent._id) : '-',
+                'Parent Name': parent?.fatherName || parent?.motherName || parent?.guardianName || '-',
+                'Parent Gmail': parent?.fatherEmail || parent?.motherEmail || parent?.guardianEmail || '-',
+            };
+        });
 
         const fileName = `Students_${selectedClass?.sclassName || 'All'}_${getCurrentDateString()}`;
         exportToExcel(exportData, fileName, 'Students');

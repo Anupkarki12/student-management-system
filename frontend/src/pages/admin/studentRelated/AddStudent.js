@@ -35,6 +35,7 @@ const AddStudent = ({ situation }) => {
     const [email, setEmail] = useState('')
     const [phone, setPhone] = useState('')
     const [address, setAddress] = useState('')
+    const [dob, setDob] = useState('')
     const [photo, setPhoto] = useState(null)
     const [photoPreview, setPhotoPreview] = useState(null)
 
@@ -102,12 +103,12 @@ const AddStudent = ({ situation }) => {
     const fields = photo 
         ? { 
             name, rollNum, password, sclassName, adminID, role, attendance, 
-            photo, email, phone, address,
+            photo, email, phone, address, dob,
             ...(linkToParent && selectedParent ? { parent: selectedParent._id } : {})
           }
         : { 
             name, rollNum, password, sclassName, adminID, role, attendance, 
-            email, phone, address,
+            email, phone, address, dob,
             ...(linkToParent && selectedParent ? { parent: selectedParent._id } : {})
           };
 
@@ -259,6 +260,23 @@ const AddStudent = ({ situation }) => {
                                         disabled
                                     />
                                 )}
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Date of Birth (Optional)</label>
+                                <input 
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        borderRadius: 8,
+                                        border: '1px solid #ccc',
+                                        fontSize: 14
+                                    }}
+                                    type="text" 
+                                    placeholder="YYYY-MM-DD"
+                                    value={dob}
+                                    onChange={(event) => setDob(event.target.value)}
+                                />
                             </Grid>
 
                             {/* Contact Information */}

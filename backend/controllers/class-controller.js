@@ -91,6 +91,8 @@ const getSclassDetail = async (req, res) => {
 const getSclassStudents = async (req, res) => {
     try {
         let students = await Student.find({ sclassName: req.params.id })
+            .populate("sclassName", "sclassName")
+            .populate("parent", "fatherName fatherOccupation fatherPhone fatherEmail motherName motherOccupation motherPhone motherEmail guardianName guardianRelation guardianPhone guardianEmail guardianAddress address phone email emergencyContact monthlyIncome");
         if (students.length > 0) {
             let modifiedStudents = students.map((student) => {
                 return { ...student._doc, password: undefined };

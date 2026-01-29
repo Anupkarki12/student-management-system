@@ -43,6 +43,10 @@ const studentSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    dob: {
+        type: Date,
+        default: ""
+    },
     examResult: [
         {
             subName: {
