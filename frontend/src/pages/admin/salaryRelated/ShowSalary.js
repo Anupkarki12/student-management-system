@@ -7,7 +7,7 @@ import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, MenuItem, Select, FormControl, InputLabel,
     Grid, Card, CardContent, Avatar, Divider, LinearProgress,
-    Tooltip
+    Tooltip, Alert
 } from '@mui/material';
 import {
     Edit as EditIcon,
@@ -16,12 +16,16 @@ import {
     ArrowBack,
     Payment,
     Visibility,
-    CheckCircle
+    CheckCircle,
+    Person,
+    Refresh
 } from '@mui/icons-material';
 import {
     getAllSalaryRecords,
     deleteSalaryRecord
 } from '../../../redux/salaryRelated/salaryHandle';
+import { getAllTeachers } from '../../../redux/teacherRelated/teacherHandle';
+import { getAllSimpleStaffs } from '../../../redux/staffRelated/staffHandle';
 import { underControl } from '../../../redux/salaryRelated/salarySlice';
 import Popup from '../../../components/Popup';
 
@@ -52,10 +56,33 @@ const ShowSalary = () => {
 
     const schoolId = currentUser?._id;
 
+    // Get teacher and staff counts from Redux state
+    const { teachersList } = useSelector(state => state.teacher);
+    const { staffList } = useSelector(state => state.staff);
+    
+    const safeTeachers = Array.isArray(teachersList) ? teachersList : [];
+    const safeStaffs = Array.isArray(staffList) ? staffList : [];
+    
+    const totalTeachers = safeTeachers.length;
+    const totalStaffs = safeStaffs.length;
+
+    // Manual refresh function
+    const handleRefresh = () => {
+        if (schoolId) {
+            console.log('Manual refresh triggered for school:', schoolId);
+            dispatch(getAllSalaryRecords(schoolId));
+            dispatch(getAllTeachers(schoolId));
+            dispatch(getAllSimpleStaffs(schoolId));
+        }
+    };
+
     useEffect(() => {
         if (schoolId) {
             console.log('Fetching salary records for school:', schoolId);
             dispatch(getAllSalaryRecords(schoolId));
+            // Also fetch teachers and staff counts
+            dispatch(getAllTeachers(schoolId));
+            dispatch(getAllSimpleStaffs(schoolId));
         } else {
             console.error('School ID not available:', currentUser);
             setMessage('Error: School ID is missing. Please log in again.');
@@ -130,6 +157,45 @@ const ShowSalary = () => {
         };
     };
 
+// Calculate summary counts - handle case-insensitive and missing values
+    const teacherRecords = safeSalaryRecords.filter(r => 
+        r.employeeType && r.employeeType.toLowerCase() === 'teacher'
+    ).length;
+    const staffRecords = safeSalaryRecords.filter(r => 
+        r.employeeType && r.employeeType.toLowerCase() === 'staff'
+    ).length;
+    const totalRecords = safeSalaryRecords.length;
+
+    // Calculate total salary amounts from teachers and staff with salary data
+    const totalTeacherSalary = safeTeachers.reduce((sum, t) => {
+        if (t.salary && t.salary.baseSalary > 0) {
+            return sum + (t.salary.netSalary || t.salary.baseSalary || 0);
+        }
+        return sum;
+    }, 0);
+    
+    const totalStaffSalary = safeStaffs.reduce((sum, s) => {
+        if (s.salary && s.salary.baseSalary > 0) {
+            return sum + (s.salary.netSalary || s.salary.baseSalary || 0);
+        }
+        return sum;
+    }, 0);
+
+    // Teachers with salary configured
+    const teachersWithSalary = safeTeachers.filter(t => t.salary && t.salary.baseSalary > 0);
+    const staffWithSalary = safeStaffs.filter(s => s.salary && s.salary.baseSalary > 0);
+
+    // Debug logging
+    console.log('Salary records data:', {
+        total: totalRecords,
+        teachers: teacherRecords,
+        staff: staffRecords,
+        totalTeachers: totalTeachers,
+        totalStaffs: totalStaffs,
+        teachersWithSalary: teachersWithSalary.length,
+        staffWithSalary: staffWithSalary.length
+    });
+
     if (loading && !safeSalaryRecords.length) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -141,7 +207,7 @@ const ShowSalary = () => {
     return (
         <Box sx={{ p: 3 }}>
             {/* Header */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2, flexWrap: 'wrap' }}>
                 <Button
                     startIcon={<ArrowBack />}
                     onClick={() => navigate('/Admin/dashboard')}
@@ -152,55 +218,241 @@ const ShowSalary = () => {
                 <Typography variant="h5" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
                     Salary Records
                 </Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => navigate('/Admin/salary/add')}
-                    sx={{ bgcolor: '#7f56da', '&:hover': { bgcolor: '#6b45c8' } }}
-                >
-                    Add Salary
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                        variant="outlined"
+                        startIcon={<Refresh />}
+                        onClick={handleRefresh}
+                        color="info"
+                    >
+                        Refresh
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => navigate('/Admin/salary/add')}
+                        sx={{ bgcolor: '#7f56da', '&:hover': { bgcolor: '#6b45c8' } }}
+                    >
+                        Add Salary
+                    </Button>
+                </Box>
             </Box>
 
-            {/* Summary Cards */}
+            {/* Error Display */}
+            {error && (
+                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setMessage('')}>
+                    <Typography variant="subtitle2">Error fetching salary records:</Typography>
+                    <Typography variant="body2">{error}</Typography>
+                    <Button 
+                        size="small" 
+                        variant="text" 
+                        color="inherit" 
+                        onClick={handleRefresh}
+                        sx={{ mt: 1 }}
+                    >
+                        Try Again
+                    </Button>
+                </Alert>
+            )}
+
+            {/* Summary Cards - Total Records for Teachers and Staff */}
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                Total Records Summary
+            </Typography>
             <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={4}>
-                    <Card>
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ bgcolor: '#e3f2fd' }}>
                         <CardContent>
-                            <Typography variant="subtitle2" color="textSecondary">
-                                Total Records
-                            </Typography>
-                            <Typography variant="h4">
-                                {safeSalaryRecords.length}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Payment color="primary" />
+                                <Typography variant="subtitle2" color="textSecondary">
+                                    Total Salary Records
+                                </Typography>
+                            </Box>
+                            <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1 }}>
+                                {totalRecords}
                             </Typography>
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={4}>
-                    <Card>
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ bgcolor: '#e8f5e9' }}>
                         <CardContent>
-                            <Typography variant="subtitle2" color="textSecondary">
-                                Teachers
-                            </Typography>
-                            <Typography variant="h4">
-                                {safeSalaryRecords.filter(r => r.employeeType === 'teacher').length}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Person color="success" />
+                                <Typography variant="subtitle2" color="textSecondary">
+                                    Total Teachers
+                                </Typography>
+                            </Box>
+                            <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1, color: 'success.main' }}>
+                                {totalTeachers}
                             </Typography>
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={4}>
-                    <Card>
+                <Grid item xs={12} sm={4}>
+                    <Card sx={{ bgcolor: '#fff3e0' }}>
                         <CardContent>
-                            <Typography variant="subtitle2" color="textSecondary">
-                                Staff
-                            </Typography>
-                            <Typography variant="h4">
-                                {safeSalaryRecords.filter(r => r.employeeType === 'staff').length}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Person color="warning" />
+                                <Typography variant="subtitle2" color="textSecondary">
+                                    Total Staff
+                                </Typography>
+                            </Box>
+                            <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1, color: 'warning.main' }}>
+                                {totalStaffs}
                             </Typography>
                         </CardContent>
                     </Card>
                 </Grid>
             </Grid>
+
+{/* Debug info */}
+            {process.env.NODE_ENV === 'development' && (
+                <Box sx={{ mb: 2, p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+                    <Typography variant="caption" color="textSecondary">
+                        Debug: Salary Records={totalRecords}, Teachers={totalTeachers}, Staff={totalStaffs}
+                    </Typography>
+                </Box>
+            )}
+
+            {/* Teachers Salary Details Section */}
+            {teachersWithSalary.length > 0 && (
+                <>
+                    <Typography variant="h6" sx={{ mt: 4, mb: 2, fontWeight: 'bold' }}>
+                        Teachers Salary Details
+                    </Typography>
+                    <TableContainer component={Paper} sx={{ mb: 3 }}>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow sx={{ backgroundColor: '#e3f2fd' }}>
+                                    <TableCell>Teacher Name</TableCell>
+                                    <TableCell>Subject</TableCell>
+                                    <TableCell align="right">Base Salary</TableCell>
+                                    <TableCell align="right">Allowances</TableCell>
+                                    <TableCell align="right">Deductions</TableCell>
+                                    <TableCell align="right">Net Salary</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {teachersWithSalary.map((teacher) => {
+                                    const allowances = (teacher.salary?.allowances?.houseRent || 0) +
+                                        (teacher.salary?.allowances?.medical || 0) +
+                                        (teacher.salary?.allowances?.transport || 0) +
+                                        (teacher.salary?.allowances?.other || 0);
+                                    const deductions = (teacher.salary?.deductions?.providentFund || 0) +
+                                        (teacher.salary?.deductions?.tax || 0) +
+                                        (teacher.salary?.deductions?.insurance || 0) +
+                                        (teacher.salary?.deductions?.other || 0);
+                                    const netSalary = teacher.salary?.netSalary || teacher.salary?.baseSalary || 0;
+
+                                    return (
+                                        <TableRow key={teacher._id} hover>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: 14 }}>
+                                                        {teacher.name?.charAt(0)}
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                                            {teacher.name}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="textSecondary">
+                                                            {teacher.email}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>{teacher.teachSubject?.subName || 'N/A'}</TableCell>
+                                            <TableCell align="right">{formatCurrency(teacher.salary?.baseSalary || 0)}</TableCell>
+                                            <TableCell align="right" sx={{ color: 'success.main' }}>
+                                                +{formatCurrency(allowances)}
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ color: 'error.main' }}>
+                                                -{formatCurrency(deductions)}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                                                    {formatCurrency(netSalary)}
+                                                </Typography>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </>
+            )}
+
+            {/* Staff Salary Details Section */}
+            {staffWithSalary.length > 0 && (
+                <>
+                    <Typography variant="h6" sx={{ mt: 4, mb: 2, fontWeight: 'bold' }}>
+                        Staff Salary Details
+                    </Typography>
+                    <TableContainer component={Paper} sx={{ mb: 3 }}>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow sx={{ backgroundColor: '#fff3e0' }}>
+                                    <TableCell>Staff Name</TableCell>
+                                    <TableCell>Position</TableCell>
+                                    <TableCell align="right">Base Salary</TableCell>
+                                    <TableCell align="right">Allowances</TableCell>
+                                    <TableCell align="right">Deductions</TableCell>
+                                    <TableCell align="right">Net Salary</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {staffWithSalary.map((staff) => {
+                                    const allowances = (staff.salary?.allowances?.houseRent || 0) +
+                                        (staff.salary?.allowances?.medical || 0) +
+                                        (staff.salary?.allowances?.transport || 0) +
+                                        (staff.salary?.allowances?.other || 0);
+                                    const deductions = (staff.salary?.deductions?.providentFund || 0) +
+                                        (staff.salary?.deductions?.tax || 0) +
+                                        (staff.salary?.deductions?.insurance || 0) +
+                                        (staff.salary?.deductions?.other || 0);
+                                    const netSalary = staff.salary?.netSalary || staff.salary?.baseSalary || 0;
+
+                                    return (
+                                        <TableRow key={staff._id} hover>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'warning.main', fontSize: 14 }}>
+                                                        {staff.name?.charAt(0)}
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                                            {staff.name}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="textSecondary">
+                                                            {staff.email}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>{staff.position || 'N/A'}</TableCell>
+                                            <TableCell align="right">{formatCurrency(staff.salary?.baseSalary || 0)}</TableCell>
+                                            <TableCell align="right" sx={{ color: 'success.main' }}>
+                                                +{formatCurrency(allowances)}
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ color: 'error.main' }}>
+                                                -{formatCurrency(deductions)}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                                                    {formatCurrency(netSalary)}
+                                                </Typography>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </>
+            )}
 
             {/* Salary Records Table */}
             <TableContainer component={Paper}>
@@ -221,18 +473,33 @@ const ShowSalary = () => {
                     <TableBody>
                         {safeSalaryRecords.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                                    <Typography color="textSecondary">
-                                        No salary records found
-                                    </Typography>
-                                    <Button
-                                        variant="contained"
-                                        startIcon={<AddIcon />}
-                                        onClick={() => navigate('/Admin/salary/add')}
-                                        sx={{ mt: 2 }}
-                                    >
-                                        Add First Salary Record
-                                    </Button>
+                                <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                                    <Box sx={{ textAlign: 'center' }}>
+                                        <Payment sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
+                                        <Typography variant="h6" color="textSecondary" gutterBottom>
+                                            No Salary Records Found
+                                        </Typography>
+                                        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                                            You need to create salary records for your teachers and staff.
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                                            <Button
+                                                variant="contained"
+                                                startIcon={<AddIcon />}
+                                                onClick={() => navigate('/Admin/salary/add')}
+                                                sx={{ bgcolor: '#7f56da', '&:hover': { bgcolor: '#6b45c8' } }}
+                                            >
+                                                Add Salary Records
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                startIcon={<Refresh />}
+                                                onClick={handleRefresh}
+                                            >
+                                                Refresh
+                                            </Button>
+                                        </Box>
+                                    </Box>
                                 </TableCell>
                             </TableRow>
                         ) : (
