@@ -383,15 +383,19 @@ const AddSalary = () => {
         }).format(amount);
     };
 
-    const getStatusChip = (lastPaymentStatus) => {
-        switch (lastPaymentStatus) {
-            case 'paid':
-                return <Chip icon={<CheckCircle />} label="Paid" color="success" size="small" />;
-            case 'pending':
-                return <Chip icon={<Pending />} label="Pending" color="warning" size="small" />;
-            default:
-                return <Chip label="No Record" color="default" size="small" />;
+    const getStatusChip = (employee) => {
+        // If employee has no salary record at all
+        if (!employee.hasSalaryRecord) {
+            return <Chip label="No Salary" color="error" size="small" icon={<Info />} />;
         }
+        
+        // If employee has salary but not paid for selected month
+        if (!employee.isPaidForSelectedMonth) {
+            return <Chip label="Pending" color="warning" size="small" icon={<Pending />} />;
+        }
+        
+        // If employee has been paid for selected month
+        return <Chip icon={<CheckCircle />} label="Paid" color="success" size="small" />;
     };
 
     if (loading && !employeesWithSalary.length) {
@@ -772,8 +776,8 @@ const AddSalary = () => {
                                             </Typography>
                                         )}
                                     </TableCell>
-                                    <TableCell>
-                                        {getStatusChip(employee.lastPaymentStatus)}
+<TableCell>
+                                        {getStatusChip(employee)}
                                     </TableCell>
                                     <TableCell align="center">
                                         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>

@@ -601,13 +601,9 @@ const salaryController = {
                 };
             });
 
-            // Filter to show only employees who have been paid for the selected month/year
-            let result = employeeSalaryData;
-            
-            if (month && year) {
-                // Only show employees who have been paid for this month
-                result = employeeSalaryData.filter(emp => emp.isPaidForSelectedMonth);
-            }
+            // Show ALL employees regardless of payment status
+            // Just indicate whether they've been paid for the selected month
+            const result = employeeSalaryData;
 
             console.log(`Returning ${result.length} employees for ${type}s, month: ${month}, year: ${year}`);
             return res.status(200).json(result);

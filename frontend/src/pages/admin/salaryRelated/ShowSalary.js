@@ -41,6 +41,9 @@ const ShowSalary = () => {
     const { currentUser } = useSelector(state => state.user);
     const { salaryRecords, loading, error, success, response } = useSelector(state => state.salary);
 
+    // Ensure salaryRecords is always an array
+    const safeSalaryRecords = Array.isArray(salaryRecords) ? salaryRecords : [];
+
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [showPopup, setShowPopup] = useState(false);
@@ -127,7 +130,7 @@ const ShowSalary = () => {
         };
     };
 
-    if (loading && !salaryRecords.length) {
+    if (loading && !safeSalaryRecords.length) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
                 <Typography>Loading salary records...</Typography>
@@ -168,7 +171,7 @@ const ShowSalary = () => {
                                 Total Records
                             </Typography>
                             <Typography variant="h4">
-                                {salaryRecords.length}
+                                {safeSalaryRecords.length}
                             </Typography>
                         </CardContent>
                     </Card>
@@ -180,7 +183,7 @@ const ShowSalary = () => {
                                 Teachers
                             </Typography>
                             <Typography variant="h4">
-                                {salaryRecords.filter(r => r.employeeType === 'teacher').length}
+                                {safeSalaryRecords.filter(r => r.employeeType === 'teacher').length}
                             </Typography>
                         </CardContent>
                     </Card>
@@ -192,7 +195,7 @@ const ShowSalary = () => {
                                 Staff
                             </Typography>
                             <Typography variant="h4">
-                                {salaryRecords.filter(r => r.employeeType === 'staff').length}
+                                {safeSalaryRecords.filter(r => r.employeeType === 'staff').length}
                             </Typography>
                         </CardContent>
                     </Card>
@@ -216,7 +219,7 @@ const ShowSalary = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {salaryRecords.length === 0 ? (
+                        {safeSalaryRecords.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                                     <Typography color="textSecondary">
@@ -233,7 +236,7 @@ const ShowSalary = () => {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            salaryRecords.map((record) => {
+                            safeSalaryRecords.map((record) => {
                                 const allowances = (record.allowances?.houseRent || 0) +
                                     (record.allowances?.medical || 0) +
                                     (record.allowances?.transport || 0) +
