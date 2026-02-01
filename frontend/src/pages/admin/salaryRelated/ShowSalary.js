@@ -181,9 +181,55 @@ const ShowSalary = () => {
         return sum;
     }, 0);
 
-    // Teachers with salary configured
+// Teachers with salary configured
     const teachersWithSalary = safeTeachers.filter(t => t.salary && t.salary.baseSalary > 0);
     const staffWithSalary = safeStaffs.filter(s => s.salary && s.salary.baseSalary > 0);
+
+    // Month/Year filter state
+    const [selectedMonth, setSelectedMonth] = useState('All');
+    const [selectedYear, setSelectedYear] = useState('All');
+
+    // Month options
+    const months = ['All', 'January', 'February', 'March', 'April', 'May', 'June', 
+                    'July', 'August', 'September', 'October', 'November', 'December'];
+    const currentYear = new Date().getFullYear();
+    const years = ['All', ...Array.from({ length: 10 }, (_, i) => currentYear - i)];
+
+    // Filter salary records by month and year
+    const filteredSalaryRecords = safeSalaryRecords.filter(record => {
+        if (selectedMonth === 'All' && selectedYear === 'All') return true;
+        
+        if (!record.paymentHistory || record.paymentHistory.length === 0) {
+            return selectedMonth === 'All' && selectedYear === 'All';
+        }
+        
+        return record.paymentHistory.some(payment => {
+            const monthMatch = selectedMonth === 'All' || payment.month === selectedMonth;
+            const yearMatch = selectedYear === 'All' || payment.year.toString() === selectedYear;
+            return monthMatch && yearMatch;
+        });
+    });
+
+    // Calculate filtered totals
+    const filteredTotalSalary = filteredSalaryRecords.reduce((sum, record) => {
+        const allowances = (record.allowances?.houseRent || 0) +
+            (record.allowances?.medical || 0) +
+            (record.allowances?.transport || 0) +
+            (record.allowances?.other || 0);
+        const deductions = (record.deductions?.providentFund || 0) +
+            (record.deductions?.tax || 0) +
+            (record.deductions?.insurance || 0) +
+            (record.deductions?.other || 0);
+        return sum + record.baseSalary + allowances - deductions;
+    }, 0);
+
+    const filteredTeacherRecords = filteredSalaryRecords.filter(r => 
+        r.employeeType && r.employeeType.toLowerCase() === 'teacher'
+    ).length;
+    
+    const filteredStaffRecords = filteredSalaryRecords.filter(r => 
+        r.employeeType && r.employeeType.toLowerCase() === 'staff'
+    ).length;
 
     // Debug logging
     console.log('Salary records data:', {
@@ -193,7 +239,8 @@ const ShowSalary = () => {
         totalTeachers: totalTeachers,
         totalStaffs: totalStaffs,
         teachersWithSalary: teachersWithSalary.length,
-        staffWithSalary: staffWithSalary.length
+        staffWithSalary: staffWithSalary.length,
+        filteredCount: filteredSalaryRecords.length
     });
 
     if (loading && !safeSalaryRecords.length) {
@@ -255,10 +302,89 @@ const ShowSalary = () => {
                 </Alert>
             )}
 
-            {/* Summary Cards - Total Records for Teachers and Staff */}
+{/* Summary Cards - Total Records for Teachers and Staff */}
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
                 Total Records Summary
             </Typography>
+            
+            {/* Month/Year Filter */}
+            <Card sx={{ mb: 3, bgcolor: '#fafafa' }}>
+                <CardContent>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
+                        Filter by Month/Year
+                    </Typography>
+                    <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={12} sm={4}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Month</InputLabel>
+                                <Select
+                                    value={selectedMonth}
+                                    label="Month"
+                                    onChange={(e) => setSelectedMonth(e.target.value)}
+                                >
+                                    {months.map((month) => (
+                                        <MenuItem key={month} value={month}>
+                                            {month === 'All' ? 'All Months' : month}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Year</InputLabel>
+                                <Select
+                                    value={selectedYear}
+                                    label="Year"
+                                    onChange={(e) => setSelectedYear(e.target.value)}
+                                >
+                                    {years.map((year) => (
+                                        <MenuItem key={year} value={year}>
+                                            {year === 'All' ? 'All Years' : year}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <Button 
+                                variant="outlined" 
+                                color="secondary" 
+                                onClick={() => {
+                                    setSelectedMonth('All');
+                                    setSelectedYear('All');
+                                }}
+                            >
+                                Clear Filter
+                            </Button>
+                        </Grid>
+                    </Grid>
+                    
+                    {/* Filtered Summary */}
+                    {(selectedMonth !== 'All' || selectedYear !== 'All') && (
+                        <Box sx={{ mt: 2, p: 2, bgcolor: '#e3f2fd', borderRadius: 1 }}>
+                            <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 'bold' }}>
+                                Filtered Results for: {selectedMonth === 'All' ? 'All Months' : selectedMonth} / {selectedYear === 'All' ? 'All Years' : selectedYear}
+                            </Typography>
+                            <Grid container spacing={2} sx={{ mt: 1 }}>
+                                <Grid item xs={4}>
+                                    <Typography variant="body2" color="textSecondary">Records</Typography>
+                                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{filteredSalaryRecords.length}</Typography>
+                                </Grid>
+                                <Grid item xs={4}>
+                                    <Typography variant="body2" color="textSecondary">Teachers</Typography>
+                                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'success.main' }}>{filteredTeacherRecords}</Typography>
+                                </Grid>
+                                <Grid item xs={4}>
+                                    <Typography variant="body2" color="textSecondary">Staff</Typography>
+                                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'warning.main' }}>{filteredStaffRecords}</Typography>
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    )}
+                </CardContent>
+            </Card>
+
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={4}>
                     <Card sx={{ bgcolor: '#e3f2fd' }}>
@@ -454,7 +580,15 @@ const ShowSalary = () => {
                 </>
             )}
 
-            {/* Salary Records Table */}
+{/* Salary Records Table */}
+            <Typography variant="h6" sx={{ mt: 4, mb: 2, fontWeight: 'bold' }}>
+                Salary Payment Records
+                {(selectedMonth !== 'All' || selectedYear !== 'All') && (
+                    <Typography component="span" variant="body2" color="textSecondary" sx={{ ml: 2 }}>
+                        (Filtered: {selectedMonth === 'All' ? 'All Months' : selectedMonth} / {selectedYear === 'All' ? 'All Years' : selectedYear})
+                    </Typography>
+                )}
+            </Typography>
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead>
@@ -471,18 +605,34 @@ const ShowSalary = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {safeSalaryRecords.length === 0 ? (
+                        {filteredSalaryRecords.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                                     <Box sx={{ textAlign: 'center' }}>
                                         <Payment sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
                                         <Typography variant="h6" color="textSecondary" gutterBottom>
-                                            No Salary Records Found
+                                            {selectedMonth !== 'All' || selectedYear !== 'All' 
+                                                ? 'No salary records found for the selected month/year'
+                                                : 'No Salary Records Found'}
                                         </Typography>
                                         <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                                            You need to create salary records for your teachers and staff.
+                                            {selectedMonth !== 'All' || selectedYear !== 'All'
+                                                ? 'Try selecting a different month/year or clear the filter.'
+                                                : 'You need to create salary records for your teachers and staff.'}
                                         </Typography>
                                         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                                            {(selectedMonth !== 'All' || selectedYear !== 'All') && (
+                                                <Button
+                                                    variant="outlined"
+                                                    color="secondary"
+                                                    onClick={() => {
+                                                        setSelectedMonth('All');
+                                                        setSelectedYear('All');
+                                                    }}
+                                                >
+                                                    Clear Filter
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="contained"
                                                 startIcon={<AddIcon />}
@@ -503,7 +653,7 @@ const ShowSalary = () => {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            safeSalaryRecords.map((record) => {
+                            filteredSalaryRecords.map((record) => {
                                 const allowances = (record.allowances?.houseRent || 0) +
                                     (record.allowances?.medical || 0) +
                                     (record.allowances?.transport || 0) +

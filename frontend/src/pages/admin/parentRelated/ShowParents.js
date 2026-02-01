@@ -186,9 +186,11 @@ const ShowParents = () => {
                                     rows.map((row) => {
                                         return (
                                             <StyledTableRow hover role="checkbox" tabIndex={-1} key={row.id}>
-                                                <PhotoCell photo={row.photo} />
                                                 {columns.map((column) => {
                                                     const value = row[column.id];
+                                                    if (column.id === 'photo') {
+                                                        return <PhotoCell key={column.id} photo={value} />;
+                                                    }
                                                     if (column.id === 'students') {
                                                         return <StudentCell key={column.id} students={value} />;
                                                     }
@@ -199,14 +201,14 @@ const ShowParents = () => {
                                                     );
                                                 })}
                                                 <StyledTableCell align="center">
-                                                    <IconButton 
+                                                    <IconButton
                                                         onClick={() => navigate("/Admin/parents/" + row.id)}
                                                         title="View Details"
                                                         color="primary"
                                                     >
                                                         <VisibilityIcon />
                                                     </IconButton>
-                                                    <IconButton 
+                                                    <IconButton
                                                         onClick={() => deleteHandler(row.id, "Parent")}
                                                         title="Delete Parent"
                                                         color="error"

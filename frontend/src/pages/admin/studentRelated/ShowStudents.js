@@ -192,8 +192,37 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
             return;
         }
 
+        console.log("Exporting students data:", studentsList);
+
         const exportData = studentsList.map((student) => {
             const parent = student.parent;
+            console.log(`Student: ${student.name}, Parent:`, parent);
+            
+            // Helper function to safely get parent name (father first, then mother, then guardian)
+            const getParentName = (p) => {
+                if (!p) return '-';
+                if (p.fatherName) return p.fatherName;
+                if (p.motherName) return p.motherName;
+                if (p.guardianName) return p.guardianName;
+                return '-';
+            };
+
+            // Helper function to safely get parent email
+            const getParentEmail = (p) => {
+                if (!p) return '-';
+                if (p.fatherEmail) return p.fatherEmail;
+                if (p.motherEmail) return p.motherEmail;
+                if (p.guardianEmail) return p.guardianEmail;
+                return '-';
+            };
+
+            // Helper function to safely get parent ID
+            const getParentID = (p) => {
+                if (!p) return '-';
+                if (p._id) return String(p._id);
+                return '-';
+            };
+
             return {
                 'Student ID': student._id || '-',
                 'Class': student.sclassName?.sclassName || 'N/A',
@@ -202,12 +231,20 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
                 'Name': student.name || '-',
                 'Address': student.address || '-',
                 'DOB': student.dob || '-',
-                'Parent ID': parent?._id ? String(parent._id) : '-',
-                'Parent Name': parent?.fatherName || parent?.motherName || parent?.guardianName || '-',
-                'Parent Gmail': parent?.fatherEmail || parent?.motherEmail || parent?.guardianEmail || '-',
+                'Parent ID': getParentID(parent),
+                'Parent Name': getParentName(parent),
+                'Parent Gmail': getParentEmail(parent),
+                'Father Name': parent?.fatherName || '-',
+                'Father Phone': parent?.fatherPhone || '-',
+                'Mother Name': parent?.motherName || '-',
+                'Mother Phone': parent?.motherPhone || '-',
+                'Guardian Name': parent?.guardianName || '-',
+                'Guardian Phone': parent?.guardianPhone || '-',
+                'Guardian Relation': parent?.guardianRelation || '-',
             };
         });
 
+        console.log("Export data prepared:", exportData);
         const fileName = `Students_${selectedClass?.sclassName || 'All'}_${getCurrentDateString()}`;
         exportToExcel(exportData, fileName, 'Students');
     };

@@ -11,6 +11,7 @@ import {
     getRequest,
     getFailed,
     getError,
+    getSuccess,
 } from './parentSlice';
 
 /**
@@ -118,7 +119,7 @@ export const getAllParents = (id) => async (dispatch) => {
     try {
         const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Parents/${id}`);
         if (result.data) {
-            dispatch(doneSuccess(result.data));
+            dispatch(getSuccess(result.data));
         }
     } catch (error) {
         dispatch(getError(extractErrorMessage(error)));

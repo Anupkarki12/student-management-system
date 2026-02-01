@@ -22,9 +22,15 @@ const parentSlice = createSlice({
         getSuccess: (state, action) => {
             state.loading = false;
             state.error = false;
-            state.response = action.payload;
             if (action.payload && action.payload.message) {
                 state.response = action.payload.message;
+                state.parentList = [];
+            } else if (Array.isArray(action.payload)) {
+                state.parentList = action.payload;
+                state.response = null;
+            } else {
+                state.parentList = [];
+                state.response = action.payload;
             }
         },
         getFailed: (state, action) => {

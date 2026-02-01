@@ -83,18 +83,32 @@ const studentForgotPassword = async (req, res) => {
 
 const getStudents = async (req, res) => {
     try {
+        console.log("Fetching all students for school:", req.params.id);
         let students = await Student.find({ school: req.params.id })
             .populate("sclassName", "sclassName")
             .populate("parent", "fatherName fatherOccupation fatherPhone fatherEmail motherName motherOccupation motherPhone motherEmail guardianName guardianRelation guardianPhone guardianEmail guardianAddress address phone email emergencyContact monthlyIncome");
+        
+        console.log("Found students count:", students.length);
         if (students.length > 0) {
+            // Log the first student to check if parent is populated
+            console.log("First student parent data:", JSON.stringify(students[0].parent, null, 2));
+            
             let modifiedStudents = students.map((student) => {
-                return { ...student._doc, password: undefined };
+                // Ensure parent is properly populated as an object, not just an ID
+                const studentObj = student.toObject();
+                return { 
+                    ...studentObj, 
+                    password: undefined,
+                    // Ensure parent is always an object if it exists
+                    parent: student.parent ? student.parent.toObject ? student.parent.toObject() : student.parent : null
+                };
             });
             res.send(modifiedStudents);
         } else {
             res.send({ message: "No students found" });
         }
     } catch (err) {
+        console.error("Error fetching students:", err);
         res.status(500).json(err);
     }
 };
