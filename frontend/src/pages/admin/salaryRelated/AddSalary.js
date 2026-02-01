@@ -113,11 +113,10 @@ const AddSalary = () => {
             // Clear selected employees and refresh data without browser refresh
             setSelectedEmployees([]);
             setSelectAll(false);
-            // Clear employees state and fetch fresh data
-            dispatch(clearEmployees());
-            setTimeout(() => {
-                dispatch(getEmployeesWithSalaryStatus(schoolId, tabValue === 0 ? 'teacher' : 'staff', month, year));
-            }, 50);
+            // Refresh employee list to show updated payment status
+            // Don't clear employees first to avoid "No Employees Found" flash
+            const employeeType = tabValue === 0 ? 'teacher' : 'staff';
+            dispatch(getEmployeesWithSalaryStatus(schoolId, employeeType, month, year));
         }
     }, [success, response, dispatch, schoolId, tabValue, month, year]);
 
@@ -140,13 +139,8 @@ const AddSalary = () => {
             return;
         }
         
-        // Clear current employees before fetching new data (fix for old data display issue)
-        dispatch(clearEmployees());
-        
-        // Small delay to allow state to clear before new data arrives
-        setTimeout(() => {
-            dispatch(getEmployeesWithSalaryStatus(schoolId, employeeType, month, year));
-        }, 50);
+        // Just fetch fresh data - don't clear employees to avoid "No Employees Found" flash
+        dispatch(getEmployeesWithSalaryStatus(schoolId, employeeType, month, year));
     };
 
     const handleTabChange = (event, newValue) => {

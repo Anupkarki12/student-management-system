@@ -24,6 +24,24 @@ import {
     underControl
 } from './salarySlice';
 
+// DEBUG: Get diagnostic info about salary system
+export const getSalaryDebugInfo = (schoolId) => async (dispatch) => {
+    dispatch(getSalaryRecordsRequest());
+
+    try {
+        console.log('[DEBUG] Fetching diagnostic info for school:', schoolId);
+        const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/Salary/Debug/${schoolId}`, {
+            timeout: 10000
+        });
+
+        console.log('[DEBUG] Diagnostic info received:', result.data);
+        return result.data;
+    } catch (error) {
+        console.error('[DEBUG] Error fetching diagnostic info:', error);
+        return { error: extractErrorMessage(error) };
+    }
+};
+
 /**
  * Safely extracts a serializable error message from an error object.
  * This prevents non-serializable values (like AxiosError) from being stored in Redux state.
@@ -58,13 +76,13 @@ export const getEmployeesWithSalaryStatus = (schoolId, employeeType, month, year
     if (!schoolId) {
         console.error('getEmployeesWithSalaryStatus: schoolId is required');
         dispatch(getEmployeesFailed('School ID is required'));
-        return;
+        return Promise.reject(new Error('School ID is required'));
     }
 
     if (!employeeType || !['teacher', 'staff', 'all'].includes(employeeType)) {
         console.error('getEmployeesWithSalaryStatus: Invalid employeeType', employeeType);
         dispatch(getEmployeesFailed('Invalid employee type'));
-        return;
+        return Promise.reject(new Error('Invalid employee type'));
     }
 
     // Build URL with query params for month/year
@@ -95,9 +113,12 @@ export const getEmployeesWithSalaryStatus = (schoolId, employeeType, month, year
             const employees = Array.isArray(result.data) ? result.data : [];
             console.log(`Successfully loaded ${employees.length} employees`);
             dispatch(getEmployeesSuccess(employees));
+            // Return the employees data for use in .then() callbacks
+            return employees;
         } else {
             console.warn('API returned empty data');
             dispatch(getEmployeesSuccess([]));
+            return [];
         }
     } catch (error) {
         // Log the full error for debugging
@@ -113,6 +134,7 @@ export const getEmployeesWithSalaryStatus = (schoolId, employeeType, month, year
         console.error('Dispatching error message:', errorMessage);
         
         dispatch(getEmployeesFailed(errorMessage));
+        return Promise.reject(new Error(errorMessage));
     }
 };
 
@@ -151,8 +173,9 @@ export const createOrUpdateSalary = (salaryData) => async (dispatch) => {
     try {
         const result = await axios.post(`${process.env.REACT_APP_BASE_URL}/Salary/Create`, salaryData);
         if (result.data) {
-            // Don't call underControl() here - let the component handle the success state
             dispatch(paymentSuccess(result.data));
+            // Don't call underControl() here - let the component handle the success state
+            // This ensures the success state persists for the useEffect to handle
             return result.data;
         }
     } catch (error) {
@@ -186,7 +209,8 @@ export const bulkSalaryPayment = (paymentData) => async (dispatch) => {
         const result = await axios.post(`${process.env.REACT_APP_BASE_URL}/Salary/BulkPayment`, paymentData);
         if (result.data) {
             dispatch(bulkPaymentSuccess(result.data));
-            dispatch(underControl());
+            // Don't call underControl() here - let the component handle the success state
+            // This ensures the success state persists for the useEffect to handle refresh
             return result.data;
         }
     } catch (error) {

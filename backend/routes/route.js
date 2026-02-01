@@ -371,6 +371,9 @@ router.get('/Salary/ByMonth/:schoolId/:month/:year', salaryController.getSalaryB
 router.put('/Salary/Update/:salaryId', salaryController.updateSalary);
 router.get('/Salary/EmployeeHistory/:schoolId/:employeeType/:employeeId', salaryController.getEmployeePaymentHistory);
 
+// DEBUG ROUTE: Get diagnostic info about salary system
+router.get('/Salary/Debug/:schoolId', salaryController.getSalaryDebugInfo);
+
 // Staff Routes
 router.post('/StaffReg', staffController.staffRegister);
 router.post('/StaffLogin', staffController.staffLogIn);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,7 +7,8 @@ import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, MenuItem, Select, FormControl, InputLabel,
     Grid, Card, CardContent, Avatar, Divider, LinearProgress,
-    Tooltip, Alert
+    Tooltip, Alert, Tab, Tabs, Collapse, CircularProgress,
+    List, ListItem, ListItemIcon, ListItemText
 } from '@mui/material';
 import {
     Edit as EditIcon,
@@ -18,11 +19,21 @@ import {
     Visibility,
     CheckCircle,
     Person,
-    Refresh
+    Refresh,
+    Warning,
+    BugReport,
+    ExpandMore,
+    ExpandLess,
+    HelpOutline,
+    Settings,
+    People,
+    AttachMoney
 } from '@mui/icons-material';
 import {
     getAllSalaryRecords,
-    deleteSalaryRecord
+    deleteSalaryRecord,
+    getEmployeesWithSalaryStatus,
+    getSalaryDebugInfo
 } from '../../../redux/salaryRelated/salaryHandle';
 import { getAllTeachers } from '../../../redux/teacherRelated/teacherHandle';
 import { getAllSimpleStaffs } from '../../../redux/staffRelated/staffHandle';
@@ -43,10 +54,12 @@ const ShowSalary = () => {
     const navigate = useNavigate();
 
     const { currentUser } = useSelector(state => state.user);
-    const { salaryRecords, loading, error, success, response } = useSelector(state => state.salary);
+    const { salaryRecords, loading, error, success, response, employeesWithSalary } = useSelector(state => state.salary);
 
     // Ensure salaryRecords is always an array
     const safeSalaryRecords = Array.isArray(salaryRecords) ? salaryRecords : [];
+    // Ensure employeesWithSalary is always an array
+    const safeEmployeesWithSalary = Array.isArray(employeesWithSalary) ? employeesWithSalary : [];
 
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState(null);
@@ -166,20 +179,67 @@ const ShowSalary = () => {
     ).length;
     const totalRecords = safeSalaryRecords.length;
 
-    // Calculate total salary amounts from teachers and staff with salary data
-    const totalTeacherSalary = safeTeachers.reduce((sum, t) => {
-        if (t.salary && t.salary.baseSalary > 0) {
-            return sum + (t.salary.netSalary || t.salary.baseSalary || 0);
+// Calculate total salary amounts from teachers and staff with salary data
+    // This is used for both the fallback and the primary calculation
+    const calculateTotalSalaryFromEmployees = () => {
+        let total = 0;
+        
+        // Sum from teachers with salary
+        safeTeachers.forEach(teacher => {
+            if (teacher.salary && teacher.salary.baseSalary > 0) {
+                total += teacher.salary.netSalary || teacher.salary.baseSalary || 0;
+            }
+        });
+        
+        // Sum from staff with salary
+        safeStaffs.forEach(staff => {
+            if (staff.salary && staff.salary.baseSalary > 0) {
+                total += staff.salary.netSalary || staff.salary.baseSalary || 0;
+            }
+        });
+        
+        return total;
+    };
+
+    // Calculate total salary paid from payment history (all-time)
+    // FIX: Made status check case-insensitive and added more robust logging
+    const totalSalaryPaidFromHistory = safeSalaryRecords.reduce((sum, record) => {
+        if (record.paymentHistory && Array.isArray(record.paymentHistory) && record.paymentHistory.length > 0) {
+            const paidPayments = record.paymentHistory.filter(p => 
+                p.status && p.status.toLowerCase() === 'paid'
+            );
+            const recordTotal = paidPayments.reduce((paymentSum, payment) => {
+                return paymentSum + (payment.amount || 0);
+            }, 0);
+            return sum + recordTotal;
         }
         return sum;
     }, 0);
-    
-    const totalStaffSalary = safeStaffs.reduce((sum, s) => {
-        if (s.salary && s.salary.baseSalary > 0) {
-            return sum + (s.salary.netSalary || s.salary.baseSalary || 0);
-        }
-        return sum;
-    }, 0);
+
+    // DEBUG: Log salary records data to diagnose the issue
+    console.log('=== SALARY RECORDS DEBUG ===');
+    console.log('Total salary records:', safeSalaryRecords.length);
+    console.log('Sample record:', safeSalaryRecords[0] ? {
+        _id: safeSalaryRecords[0]._id,
+        hasPaymentHistory: !!safeSalaryRecords[0].paymentHistory,
+        paymentHistoryLength: safeSalaryRecords[0].paymentHistory?.length || 0,
+        paymentHistorySample: safeSalaryRecords[0].paymentHistory?.[0] || 'none',
+        baseSalary: safeSalaryRecords[0].baseSalary
+    } : 'no records');
+    console.log('Total Salary Paid from history:', totalSalaryPaidFromHistory);
+    console.log('Teachers count:', safeTeachers.length);
+    console.log('Staff count:', safeStaffs.length);
+    console.log('Teachers with salary:', safeTeachers.filter(t => t.salary?.baseSalary > 0).length);
+    console.log('Staff with salary:', safeStaffs.filter(s => s.salary?.baseSalary > 0).length);
+    console.log('Total from employee salaries:', calculateTotalSalaryFromEmployees());
+    console.log('===========================');
+
+    // Use payment history total if available, otherwise use employee salary data as fallback
+    // The fallback calculation uses teachers' and staff's salary field which is updated when salaries are configured
+    // FIX: Add defensive check to prevent undefined reference
+    const totalSalaryPaid = (totalSalaryPaidFromHistory > 0 || calculateTotalSalaryFromEmployees() > 0) 
+        ? (totalSalaryPaidFromHistory > 0 ? totalSalaryPaidFromHistory : calculateTotalSalaryFromEmployees())
+        : 0;
 
 // Teachers with salary configured
     const teachersWithSalary = safeTeachers.filter(t => t.salary && t.salary.baseSalary > 0);
@@ -188,12 +248,104 @@ const ShowSalary = () => {
     // Month/Year filter state
     const [selectedMonth, setSelectedMonth] = useState('All');
     const [selectedYear, setSelectedYear] = useState('All');
+    
+    // State for storing filtered employees data (teachers and staff)
+    const [filteredTeachers, setFilteredTeachers] = useState([]);
+    const [filteredStaff, setFilteredStaff] = useState([]);
+    const [loadingEmployees, setLoadingEmployees] = useState(false);
 
     // Month options
     const months = ['All', 'January', 'February', 'March', 'April', 'May', 'June', 
                     'July', 'August', 'September', 'October', 'November', 'December'];
     const currentYear = new Date().getFullYear();
     const years = ['All', ...Array.from({ length: 10 }, (_, i) => currentYear - i)];
+
+    // Debug: Log Redux state when employeesWithSalary changes
+    useEffect(() => {
+        if (safeEmployeesWithSalary.length > 0) {
+            console.log('Redux employeesWithSalary updated:', {
+                count: safeEmployeesWithSalary.length,
+                sample: safeEmployeesWithSalary[0],
+                allTypes: [...new Set(safeEmployeesWithSalary.map(e => e.employeeType))]
+            });
+        }
+    }, [safeEmployeesWithSalary]);
+
+    // Fetch employees with salary status when month/year filter changes
+    useEffect(() => {
+        if (schoolId) {
+            setLoadingEmployees(true);
+            
+            // Use actual selected values, or default to current month/year if "All"
+            const effectiveMonth = selectedMonth !== 'All' ? selectedMonth : months[new Date().getMonth()];
+            const effectiveYear = selectedYear !== 'All' ? selectedYear : currentYear.toString();
+            
+            console.log(`Fetching employees with salary status - Month: ${effectiveMonth}, Year: ${effectiveYear}`);
+            
+            // Fetch teachers
+            dispatch(getEmployeesWithSalaryStatus(schoolId, 'teacher', effectiveMonth, effectiveYear))
+                .then((teachers) => {
+                    console.log('Teachers API response:', {
+                        isArray: Array.isArray(teachers),
+                        length: teachers?.length,
+                        sample: teachers?.[0]
+                    });
+                    const filtered = Array.isArray(teachers) ? teachers : [];
+                    setFilteredTeachers(filtered);
+                    
+                    // Log payment status breakdown for teachers
+                    const paidCount = filtered.filter(t => t.isPaidForSelectedMonth).length;
+                    console.log(`Teachers: ${paidCount} paid out of ${filtered.length}`);
+                })
+                .catch((err) => {
+                    console.error('Error fetching teachers:', err);
+                    setFilteredTeachers([]);
+                });
+            
+            // Fetch staff
+            dispatch(getEmployeesWithSalaryStatus(schoolId, 'staff', effectiveMonth, effectiveYear))
+                .then((staff) => {
+                    console.log('Staff API response:', {
+                        isArray: Array.isArray(staff),
+                        length: staff?.length,
+                        sample: staff?.[0]
+                    });
+                    const filtered = Array.isArray(staff) ? staff : [];
+                    setFilteredStaff(filtered);
+                    
+                    // Log payment status breakdown for staff
+                    const paidCount = filtered.filter(s => s.isPaidForSelectedMonth).length;
+                    console.log(`Staff: ${paidCount} paid out of ${filtered.length}`);
+                })
+                .catch((err) => {
+                    console.error('Error fetching staff:', err);
+                    setFilteredStaff([]);
+                })
+                .finally(() => {
+                    setLoadingEmployees(false);
+                });
+        }
+    }, [schoolId, selectedMonth, selectedYear, dispatch]);
+
+    // Calculate summary for filtered employees
+    const paidTeachers = filteredTeachers.filter(t => t.isPaidForSelectedMonth === true).length;
+    const unpaidTeachers = filteredTeachers.length - paidTeachers;
+    const paidStaff = filteredStaff.filter(s => s.isPaidForSelectedMonth === true).length;
+    const unpaidStaff = filteredStaff.length - paidStaff;
+
+    // Debug log the counts
+    useEffect(() => {
+        if (selectedMonth !== 'All' && selectedYear !== 'All') {
+            console.log('Payment Status Counts:', {
+                paidTeachers,
+                unpaidTeachers,
+                paidStaff,
+                unpaidStaff,
+                totalTeachers: filteredTeachers.length,
+                totalStaff: filteredStaff.length
+            });
+        }
+    }, [paidTeachers, unpaidTeachers, paidStaff, unpaidStaff, filteredTeachers.length, filteredStaff.length, selectedMonth, selectedYear]);
 
     // Filter salary records by month and year
     const filteredSalaryRecords = safeSalaryRecords.filter(record => {
@@ -223,13 +375,29 @@ const ShowSalary = () => {
         return sum + record.baseSalary + allowances - deductions;
     }, 0);
 
-    const filteredTeacherRecords = filteredSalaryRecords.filter(r => 
+    const filteredTeacherRecords = filteredSalaryRecords.filter(r =>
         r.employeeType && r.employeeType.toLowerCase() === 'teacher'
     ).length;
-    
-    const filteredStaffRecords = filteredSalaryRecords.filter(r => 
+
+    const filteredStaffRecords = filteredSalaryRecords.filter(r =>
         r.employeeType && r.employeeType.toLowerCase() === 'staff'
     ).length;
+
+    // Calculate total salary paid for the filtered month/year
+    const filteredTotalSalaryPaid = filteredSalaryRecords.reduce((sum, record) => {
+        if (record.paymentHistory && Array.isArray(record.paymentHistory)) {
+            const paidPayments = record.paymentHistory.filter(p =>
+                p.status === 'paid' &&
+                (selectedMonth === 'All' || p.month === selectedMonth) &&
+                (selectedYear === 'All' || p.year.toString() === selectedYear)
+            );
+            const recordTotal = paidPayments.reduce((paymentSum, payment) => {
+                return paymentSum + (payment.amount || 0);
+            }, 0);
+            return sum + recordTotal;
+        }
+        return sum;
+    }, 0);
 
     // Debug logging
     console.log('Salary records data:', {
@@ -360,7 +528,7 @@ const ShowSalary = () => {
                         </Grid>
                     </Grid>
                     
-                    {/* Filtered Summary */}
+            {/* Filtered Summary */}
                     {(selectedMonth !== 'All' || selectedYear !== 'All') && (
                         <Box sx={{ mt: 2, p: 2, bgcolor: '#e3f2fd', borderRadius: 1 }}>
                             <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 'bold' }}>
@@ -390,13 +558,18 @@ const ShowSalary = () => {
                     <Card sx={{ bgcolor: '#e3f2fd' }}>
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Payment color="primary" />
+                                <AttachMoney color="primary" />
                                 <Typography variant="subtitle2" color="textSecondary">
-                                    Total Salary Records
+                                    Total Salary Paid
                                 </Typography>
                             </Box>
-                            <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1 }}>
-                                {totalRecords}
+                            <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1, color: 'primary.main' }}>
+                                {formatCurrency(totalSalaryPaid)}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                                {totalSalaryPaidFromHistory > 0 
+                                    ? 'Teachers & Staff (All Time)'
+                                    : 'Based on Configured Salaries'}
                             </Typography>
                         </CardContent>
                     </Card>
@@ -440,6 +613,309 @@ const ShowSalary = () => {
                         Debug: Salary Records={totalRecords}, Teachers={totalTeachers}, Staff={totalStaffs}
                     </Typography>
                 </Box>
+            )}
+
+            {/* Always show Payment Status section when data is loaded */}
+            {/* Payment Status Summary */}
+            <Typography variant="h6" sx={{ mt: 4, mb: 2, fontWeight: 'bold' }}>
+                {(() => {
+                    const monthText = selectedMonth === 'All' ? 'All Months' : selectedMonth;
+                    const yearText = selectedYear === 'All' ? 'All Years' : selectedYear;
+                    return `Payment Status for ${monthText} / ${yearText}`;
+                })()}
+            </Typography>
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={6} sm={3}>
+                    <Card sx={{ bgcolor: '#e8f5e9' }}>
+                        <CardContent>
+                            <Typography variant="subtitle2" color="textSecondary">Teachers Paid</Typography>
+                            <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>{paidTeachers}</Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                    <Card sx={{ bgcolor: '#ffebee' }}>
+                        <CardContent>
+                            <Typography variant="subtitle2" color="textSecondary">Teachers Unpaid</Typography>
+                            <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'error.main' }}>{unpaidTeachers}</Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                    <Card sx={{ bgcolor: '#e8f5e9' }}>
+                        <CardContent>
+                            <Typography variant="subtitle2" color="textSecondary">Staff Paid</Typography>
+                            <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>{paidStaff}</Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                    <Card sx={{ bgcolor: '#ffebee' }}>
+                        <CardContent>
+                            <Typography variant="subtitle2" color="textSecondary">Staff Unpaid</Typography>
+                            <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'error.main' }}>{unpaidStaff}</Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+            </Grid>
+
+            {/* Loading Indicator */}
+            {loadingEmployees && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                    <Typography>Loading employee salary data...</Typography>
+                </Box>
+            )}
+
+            {/* Teachers with Salary Payment Status */}
+            {!loadingEmployees && filteredTeachers.length > 0 && (
+                <>
+                    <Typography variant="h6" sx={{ mt: 4, mb: 2, fontWeight: 'bold' }}>
+                        Teachers Salary Status
+                    </Typography>
+                    <TableContainer component={Paper} sx={{ mb: 3 }}>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow sx={{ backgroundColor: '#e3f2fd' }}>
+                                    <TableCell>Teacher Name</TableCell>
+                                    <TableCell>Position</TableCell>
+                                    <TableCell align="right">Base Salary</TableCell>
+                                    <TableCell align="right">Allowances</TableCell>
+                                    <TableCell align="right">Deductions</TableCell>
+                                    <TableCell align="right">Net Salary</TableCell>
+                                    <TableCell>Payment Status</TableCell>
+                                    <TableCell align="center">Actions</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {filteredTeachers.map((teacher) => {
+                                    const allowances = teacher.totalAllowances || 0;
+                                    const deductions = teacher.totalDeductions || 0;
+                                    const netSalary = teacher.netSalary || 0;
+                                    
+                                    return (
+                                        <TableRow key={teacher._id} hover>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: 14 }}>
+                                                        {teacher.name?.charAt(0)}
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                                            {teacher.name}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="textSecondary">
+                                                            {teacher.email}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>{teacher.position}</TableCell>
+                                            <TableCell align="right">{formatCurrency(teacher.baseSalary || 0)}</TableCell>
+                                            <TableCell align="right" sx={{ color: 'success.main' }}>
+                                                +{formatCurrency(allowances)}
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ color: 'error.main' }}>
+                                                -{formatCurrency(deductions)}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                                                    {formatCurrency(netSalary)}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip 
+                                                    label={teacher.isPaidForSelectedMonth ? 'Paid' : 'Unpaid'} 
+                                                    color={teacher.isPaidForSelectedMonth ? 'success' : 'error'}
+                                                    size="small"
+                                                    icon={teacher.isPaidForSelectedMonth ? <CheckCircle /> : undefined}
+                                                />
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Button
+                                                    size="small"
+                                                    variant="contained"
+                                                    color="success"
+                                                    onClick={() => navigate('/Admin/salary/add')}
+                                                >
+                                                    Pay
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </>
+            )}
+
+            {/* Staff with Salary Payment Status */}
+            {!loadingEmployees && filteredStaff.length > 0 && (
+                <>
+                    <Typography variant="h6" sx={{ mt: 4, mb: 2, fontWeight: 'bold' }}>
+                        Staff Salary Status
+                    </Typography>
+                    <TableContainer component={Paper} sx={{ mb: 3 }}>
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow sx={{ backgroundColor: '#fff3e0' }}>
+                                    <TableCell>Staff Name</TableCell>
+                                    <TableCell>Position</TableCell>
+                                    <TableCell align="right">Base Salary</TableCell>
+                                    <TableCell align="right">Allowances</TableCell>
+                                    <TableCell align="right">Deductions</TableCell>
+                                    <TableCell align="right">Net Salary</TableCell>
+                                    <TableCell>Payment Status</TableCell>
+                                    <TableCell align="center">Actions</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {filteredStaff.map((staff) => {
+                                    const allowances = staff.totalAllowances || 0;
+                                    const deductions = staff.totalDeductions || 0;
+                                    const netSalary = staff.netSalary || 0;
+                                    
+                                    return (
+                                        <TableRow key={staff._id} hover>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'warning.main', fontSize: 14 }}>
+                                                        {staff.name?.charAt(0)}
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                                            {staff.name}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="textSecondary">
+                                                            {staff.email}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>{staff.position}</TableCell>
+                                            <TableCell align="right">{formatCurrency(staff.baseSalary || 0)}</TableCell>
+                                            <TableCell align="right" sx={{ color: 'success.main' }}>
+                                                +{formatCurrency(allowances)}
+                                            </TableCell>
+                                            <TableCell align="right" sx={{ color: 'error.main' }}>
+                                                -{formatCurrency(deductions)}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                                                    {formatCurrency(netSalary)}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip 
+                                                    label={staff.isPaidForSelectedMonth ? 'Paid' : 'Unpaid'} 
+                                                    color={staff.isPaidForSelectedMonth ? 'success' : 'error'}
+                                                    size="small"
+                                                    icon={staff.isPaidForSelectedMonth ? <CheckCircle /> : undefined}
+                                                />
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Button
+                                                    size="small"
+                                                    variant="contained"
+                                                    color="success"
+                                                    onClick={() => navigate('/Admin/salary/add')}
+                                                >
+                                                    Pay
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </>
+            )}
+
+            {/* Show message when no employees found with current filters */}
+            {!loadingEmployees && filteredTeachers.length === 0 && filteredStaff.length === 0 && (safeTeachers.length > 0 || safeStaffs.length > 0) && (
+                <Card sx={{ mb: 3, bgcolor: '#fff8e1', border: '1px solid #ffc107' }}>
+                    <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                            <HelpOutline sx={{ fontSize: 40, color: 'warning.main', mt: 0.5 }} />
+                            <Box sx={{ flexGrow: 1 }}>
+                                <Typography variant="h6" color="warning.dark" sx={{ fontWeight: 'bold' }}>
+                                    No Employees Found for Selected Period
+                                </Typography>
+                                <Typography variant="body2" sx={{ mt: 1 }}>
+                                    {(() => {
+                                        const monthText = selectedMonth === 'All' ? 'any month' : selectedMonth;
+                                        const yearText = selectedYear === 'All' ? 'any year' : selectedYear;
+                                        return (
+                                            <>
+                                                Employees exist with salary records but no payments have been recorded for <strong>{monthText} {yearText}</strong>. 
+                                                You can still view salary details below and make payments.
+                                            </>
+                                        );
+                                    })()}
+                                </Typography>
+                                
+                                {/* Diagnostic Information */}
+                                <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(255,255,255,0.7)', borderRadius: 1 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                        System Status:
+                                    </Typography>
+                                    <Grid container spacing={1}>
+                                        <Grid item xs={6}>
+                                            <Typography variant="body2">
+                                                <People sx={{ verticalAlign: 'middle', mr: 0.5, fontSize: 18 }} />
+                                                Total Teachers: <strong>{totalTeachers}</strong>
+                                            </Typography>
+                                        </Grid>
+                                        <Grid item xs={6}>
+                                            <Typography variant="body2">
+                                                <People sx={{ verticalAlign: 'middle', mr: 0.5, fontSize: 18 }} />
+                                                Total Staff: <strong>{totalStaffs}</strong>
+                                            </Typography>
+                                        </Grid>
+                                        <Grid item xs={6}>
+                                            <Typography variant="body2">
+                                                <AttachMoney sx={{ verticalAlign: 'middle', mr: 0.5, fontSize: 18 }} />
+                                                Teachers with Salary: <strong>{teachersWithSalary.length}</strong>
+                                            </Typography>
+                                        </Grid>
+                                        <Grid item xs={6}>
+                                            <Typography variant="body2">
+                                                <AttachMoney sx={{ verticalAlign: 'middle', mr: 0.5, fontSize: 18 }} />
+                                                Staff with Salary: <strong>{staffWithSalary.length}</strong>
+                                            </Typography>
+                                        </Grid>
+                                        <Grid item xs={12}>
+                                            <Typography variant="body2">
+                                                <Payment sx={{ verticalAlign: 'middle', mr: 0.5, fontSize: 18 }} />
+                                                Total Salary Records: <strong>{totalRecords}</strong>
+                                            </Typography>
+                                        </Grid>
+                                    </Grid>
+                                </Box>
+
+                                {/* Action Buttons */}
+                                <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<AddIcon />}
+                                        onClick={() => navigate('/Admin/salary/add')}
+                                        sx={{ bgcolor: '#7f56da', '&:hover': { bgcolor: '#6b45c8' } }}
+                                    >
+                                        Make Payment
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={<Refresh />}
+                                        onClick={handleRefresh}
+                                    >
+                                        Refresh Data
+                                    </Button>
+                                </Box>
+                            </Box>
+                        </Box>
+                    </CardContent>
+                </Card>
             )}
 
             {/* Teachers Salary Details Section */}

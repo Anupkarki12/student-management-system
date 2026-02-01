@@ -445,6 +445,8 @@ const salaryController = {
 
             const schoolObjectId = new mongoose.Types.ObjectId(schoolId);
 
+            console.log(`[Salary] getEmployeesWithSalaryStatus: schoolId=${schoolId}, type=${type}, month=${month}, year=${year}`);
+
             let employees = [];
             let employeeSalaries = [];
 
@@ -453,36 +455,35 @@ const salaryController = {
                     .select("-password")
                     .lean();
 
-            // Build query for salary records - filter by month/year if provided
+                console.log(`[Salary] Found ${employees.length} teachers`);
+                
+                // Build query for salary records - get ALL active salary records for this employee type
+                // We do NOT filter by month/year here - we need all salaries to show employees
                 const salaryQuery = {
                     school: schoolObjectId,
                     employeeType: "teacher",
                     status: "active"
                 };
                 
-                // If month and year are provided, we need to show all employees with their salary status
-                // For employees who have salary records but no payment for this month, they should still appear
-                // So we don't filter by payment history in the salary query - we fetch all active salaries
-                
                 employeeSalaries = await Salary.find(salaryQuery).lean();
+                console.log(`[Salary] Found ${employeeSalaries.length} teacher salary records`);
 
             } else if (type === "staff") {
                 employees = await Staff.find({ school: schoolObjectId })
                     .select("-password")
                     .lean();
 
-                // Build query for salary records - filter by month/year if provided
+                console.log(`[Salary] Found ${employees.length} staff`);
+                
+                // Build query for salary records - get ALL active salary records for this employee type
                 const salaryQuery = {
                     school: schoolObjectId,
                     employeeType: "staff",
                     status: "active"
                 };
                 
-                // If month and year are provided, we need to show all employees with their salary status
-                // For employees who have salary records but no payment for this month, they should still appear
-                // So we don't filter by payment history in the salary query - we fetch all active salaries
-                
                 employeeSalaries = await Salary.find(salaryQuery).lean();
+                console.log(`[Salary] Found ${employeeSalaries.length} staff salary records`);
             } else {
                 return res.status(400).json({ error: "Invalid employee type" });
             }
@@ -764,12 +765,123 @@ const salaryController = {
                 salaryId: salary._id,
                 baseSalary: salary.baseSalary,
                 position: salary.position,
-                paymentHistory: salary.paymentHistory.sort((a, b) => 
+                paymentHistory: salary.paymentHistory.sort((a, b) =>
                     new Date(b.paymentDate) - new Date(a.paymentDate)
                 )
             });
         } catch (error) {
             console.error('Error in getEmployeePaymentHistory:', error);
+            res.status(500).json({ error: error.message });
+        }
+    },
+
+    // DEBUG ENDPOINT: Get diagnostic info about salary system
+    getSalaryDebugInfo: async (req, res) => {
+        try {
+            const { schoolId } = req.params;
+
+            console.log(`[DEBUG] Getting salary debug info for school: ${schoolId}`);
+
+            // Convert to ObjectId if valid
+            const schoolObjectId = mongoose.Types.ObjectId.isValid(schoolId)
+                ? new mongoose.Types.ObjectId(schoolId)
+                : schoolId;
+
+            // Get counts
+            const teacherCount = await Teacher.countDocuments({ school: schoolObjectId });
+            const staffCount = await Staff.countDocuments({ school: schoolObjectId });
+            const salaryCount = await Salary.countDocuments({ school: schoolObjectId, status: 'active' });
+
+            // Get sample teachers
+            const sampleTeachers = await Teacher.find({ school: schoolObjectId })
+                .select('name email salary')
+                .limit(5)
+                .lean();
+
+            // Get sample staff
+            const sampleStaff = await Staff.find({ school: schoolObjectId })
+                .select('name email salary')
+                .limit(5)
+                .lean();
+
+            // Get sample salaries
+            const sampleSalaries = await Salary.find({ school: schoolObjectId, status: 'active' })
+                .limit(10)
+                .lean();
+
+            // Check for corrupted records
+            const corruptedSalaries = await Salary.find({
+                school: schoolObjectId,
+                status: 'active',
+                employee: { $type: "string" }
+            }).lean();
+
+            const debugInfo = {
+                schoolId: schoolId,
+                isValidObjectId: mongoose.Types.ObjectId.isValid(schoolId),
+                counts: {
+                    teachers: teacherCount,
+                    staff: staffCount,
+                    totalEmployees: teacherCount + staffCount,
+                    salaryRecords: salaryCount
+                },
+                teachersWithSalary: sampleTeachers.filter(t => t.salary && t.salary.baseSalary > 0).length,
+                staffWithSalary: sampleStaff.filter(s => s.salary && s.salary.baseSalary > 0).length,
+                corruptedSalaryRecords: corruptedSalaries.length,
+                sampleTeachers: sampleTeachers.map(t => ({
+                    _id: t._id,
+                    name: t.name,
+                    email: t.email,
+                    hasSalaryInSchema: !!t.salary,
+                    baseSalary: t.salary?.baseSalary || 0
+                })),
+                sampleStaff: sampleStaff.map(s => ({
+                    _id: s._id,
+                    name: s.name,
+                    email: s.email,
+                    hasSalaryInSchema: !!s.salary,
+                    baseSalary: s.salary?.baseSalary || 0
+                })),
+                sampleSalaries: sampleSalaries.map(s => ({
+                    _id: s._id,
+                    employeeType: s.employeeType,
+                    employeeId: s.employee,
+                    isEmployeeIdValid: mongoose.Types.ObjectId.isValid(s.employee?.toString()),
+                    position: s.position,
+                    baseSalary: s.baseSalary,
+                    paymentHistoryCount: s.paymentHistory?.length || 0
+                })),
+                corruptedSalaries: corruptedSalaries.map(s => ({
+                    _id: s._id,
+                    employeeType: s.employeeType,
+                    employee: s.employee,
+                    position: s.position
+                })),
+                recommendations: []
+            };
+
+            // Generate recommendations
+            if (teacherCount === 0 && staffCount === 0) {
+                debugInfo.recommendations.push("No teachers or staff found. Please add employees first.");
+            }
+            if (salaryCount === 0) {
+                debugInfo.recommendations.push("No salary records found. Go to /Admin/salary/add to create salary records.");
+            }
+            if (corruptedSalaries.length > 0) {
+                debugInfo.recommendations.push(`${corruptedSalaries.length} corrupted salary records found. Run cleanup at POST /Salary/Cleanup`);
+            }
+            if (teacherCount > 0 && salaryCount === 0) {
+                debugInfo.recommendations.push("Teachers exist but no salary records. Set up salaries for your teachers.");
+            }
+            if (staffCount > 0 && salaryCount === 0) {
+                debugInfo.recommendations.push("Staff exist but no salary records. Set up salaries for your staff.");
+            }
+
+            console.log('[DEBUG] Debug info:', JSON.stringify(debugInfo.counts, null, 2));
+
+            res.status(200).json(debugInfo);
+        } catch (error) {
+            console.error('[DEBUG] Error getting debug info:', error);
             res.status(500).json({ error: error.message });
         }
     }
