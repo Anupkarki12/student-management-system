@@ -691,15 +691,6 @@ const ShowSalary = () => {
                 </Grid>
             </Grid>
 
-{/* Debug info */}
-            {process.env.NODE_ENV === 'development' && (
-                <Box sx={{ mb: 2, p: 1, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                    <Typography variant="caption" color="textSecondary">
-                        Debug: Salary Records={totalRecords}, Teachers={totalTeachers}, Staff={totalStaffs}
-                    </Typography>
-                </Box>
-            )}
-
             {/* Always show Payment Status section when data is loaded */}
             {/* Payment Status Summary */}
             <Typography variant="h6" sx={{ mt: 4, mb: 2, fontWeight: 'bold' }}>
