@@ -2,6 +2,7 @@ const Sclass = require('../models/sclassSchema.js');
 const Student = require('../models/studentSchema.js');
 const Subject = require('../models/subjectSchema.js');
 const Teacher = require('../models/teacherSchema.js');
+const TeacherClassAssignment = require('../models/teacherClassAssignmentSchema.js');
 
 const sclassCreate = async (req, res) => {
     try {
@@ -150,5 +151,38 @@ const deleteSclasses = async (req, res) => {
     }
 }
 
+const getSclassTeachers = async (req, res) => {
+    try {
+        const classId = req.params.id;
+        
+        // Fetch teacher class assignments with populated teacher and subject details
+        const assignments = await TeacherClassAssignment.find({ sclass: classId })
+            .populate('teacher', 'name email photo')
+            .populate('subject', 'subName subCode')
+            .populate('sclass', 'sclassName')
+            .sort({ createdAt: -1 });
 
-module.exports = { sclassCreate, sclassList, deleteSclass, deleteSclasses, getSclassDetail, getSclassStudents, updateSclass };
+        if (assignments.length > 0) {
+            // Transform data for frontend consumption
+            const teachersData = assignments.map(assignment => ({
+                _id: assignment._id,
+                teacherName: assignment.teacher?.name || 'N/A',
+                teacherEmail: assignment.teacher?.email || 'N/A',
+                teacherPhoto: assignment.teacher?.photo || '',
+                subjectName: assignment.subject?.subName || 'N/A',
+                subjectCode: assignment.subject?.subCode || 'N/A',
+                assignmentDate: assignment.createdAt
+            }));
+            
+            res.send(teachersData);
+        } else {
+            res.send({ message: "No teachers assigned to this class" });
+        }
+    } catch (err) {
+        console.error("Error fetching class teachers:", err);
+        res.status(500).json(err);
+    }
+}
+
+
+module.exports = { sclassCreate, sclassList, deleteSclass, deleteSclasses, getSclassDetail, getSclassStudents, updateSclass, getSclassTeachers };

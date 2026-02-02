@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom'
-import { getClassDetails, getClassStudents, getSubjectList } from "../../../redux/sclassRelated/sclassHandle";
+import { getClassDetails, getClassStudents, getSubjectList, getClassTeachers } from "../../../redux/sclassRelated/sclassHandle";
 import { deleteUser } from '../../../redux/userRelated/userHandle';
 import {
-    Box, Container, Typography, Tab, IconButton
+    Box, Container, Typography, Tab, IconButton, Paper, Card, CardContent, Grid
 } from '@mui/material';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
@@ -18,12 +18,17 @@ import SpeedDialTemplate from "../../../components/SpeedDialTemplate";
 import Popup from "../../../components/Popup";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PostAddIcon from '@mui/icons-material/PostAdd';
+import GroupIcon from '@mui/icons-material/Group';
+import SchoolIcon from '@mui/icons-material/School';
+import PeopleIcon from '@mui/icons-material/People';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import PersonIcon from '@mui/icons-material/Person';
 
 const ClassDetails = () => {
     const params = useParams()
     const navigate = useNavigate()
     const dispatch = useDispatch();
-    const { subjectsList, sclassStudents, sclassDetails, loading, error, response, getresponse } = useSelector((state) => state.sclass);
+    const { subjectsList, sclassStudents, sclassDetails, sclassTeachers, loading, error, response, getresponse } = useSelector((state) => state.sclass);
 
     const classID = params.id
 
@@ -31,6 +36,7 @@ const ClassDetails = () => {
         dispatch(getClassDetails(classID, "Sclass"));
         dispatch(getSubjectList(classID, "ClassSubjects"))
         dispatch(getClassStudents(classID));
+        dispatch(getClassTeachers(classID));
     }, [dispatch, classID])
 
     if (error) {
@@ -204,9 +210,71 @@ const ClassDetails = () => {
     }
 
     const ClassTeachersSection = () => {
+        const teacherColumns = [
+            { id: 'name', label: 'Teacher Name', minWidth: 170 },
+            { id: 'email', label: 'Email', minWidth: 200 },
+            { id: 'subject', label: 'Subject', minWidth: 150 },
+        ]
+
+        const teacherRows = sclassTeachers.map((teacher) => {
+            return {
+                name: teacher.teacherName,
+                email: teacher.teacherEmail,
+                subject: teacher.subjectName,
+                id: teacher._id,
+            };
+        })
+
+        const TeachersButtonHaver = ({ row }) => {
+            return (
+                <>
+                    <BlueButton
+                        variant="contained"
+                        onClick={() => {
+                            // Could navigate to teacher details if needed
+                        }}
+                    >
+                        View
+                    </BlueButton>
+                </>
+            );
+        };
+
+        const teacherActions = [
+            {
+                icon: <GroupIcon color="primary" />, name: 'Assign Teacher',
+                action: () => navigate("/Admin/class/assignteacher/" + classID)
+            },
+        ];
+
         return (
             <>
-                Teachers
+                {getresponse ? (
+                    <>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                            <GreenButton
+                                variant="contained"
+                                onClick={() => navigate("/Admin/class/assignteacher/" + classID)}
+                            >
+                                Assign Teacher
+                            </GreenButton>
+                        </Box>
+                    </>
+                ) : (
+                    <>
+                        <Typography variant="h5" gutterBottom>
+                            Teachers List:
+                        </Typography>
+                        {sclassTeachers && sclassTeachers.length > 0 ? (
+                            <TableTemplate buttonHaver={TeachersButtonHaver} columns={teacherColumns} rows={teacherRows} />
+                        ) : (
+                            <Typography variant="body1" sx={{ mt: 2 }}>
+                                No teachers assigned to this class yet.
+                            </Typography>
+                        )}
+                        <SpeedDialTemplate actions={teacherActions} />
+                    </>
+                )}
             </>
         )
     }
@@ -214,74 +282,132 @@ const ClassDetails = () => {
     const ClassDetailsSection = () => {
         const numberOfSubjects = subjectsList.length;
         const numberOfStudents = sclassStudents.length;
+        const numberOfTeachers = sclassTeachers.length;
 
         return (
-            <>
-                <Typography variant="h4" align="center" gutterBottom>
-                    Class Details
-                </Typography>
-                <Typography variant="h5" gutterBottom>
-                    This is Class {sclassDetails && sclassDetails.sclassName}
-                </Typography>
-                <Typography variant="h6" gutterBottom>
-                    Number of Subjects: {numberOfSubjects}
-                </Typography>
-                <Typography variant="h6" gutterBottom>
-                    Number of Students: {numberOfStudents}
-                </Typography>
-                {getresponse &&
-                    <GreenButton
-                        variant="contained"
-                        onClick={() => navigate("/Admin/class/addstudents/" + classID)}
-                    >
-                        Add Students
-                    </GreenButton>
-                }
-                {response &&
-                    <GreenButton
-                        variant="contained"
-                        onClick={() => navigate("/Admin/addsubject/" + classID)}
-                    >
-                        Add Subjects
-                    </GreenButton>
-                }
-            </>
+            <Box sx={{ mt: 2 }}>
+                <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                    <Typography variant="h4" align="center" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                        <SchoolIcon sx={{ fontSize: 40, verticalAlign: 'middle', mr: 1 }} />
+                        Class {sclassDetails && sclassDetails.sclassName} Details
+                    </Typography>
+                </Paper>
+
+                <Grid container spacing={3}>
+                    <Grid item xs={12} sm={6} md={4}>
+                        <Card elevation={3} sx={{ borderRadius: 2, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                            <CardContent sx={{ color: 'white', textAlign: 'center' }}>
+                                <MenuBookIcon sx={{ fontSize: 50, mb: 1 }} />
+                                <Typography variant="h5">Subjects</Typography>
+                                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>{numberOfSubjects}</Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                        <Card elevation={3} sx={{ borderRadius: 2, background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' }}>
+                            <CardContent sx={{ color: 'white', textAlign: 'center' }}>
+                                <PeopleIcon sx={{ fontSize: 50, mb: 1 }} />
+                                <Typography variant="h5">Students</Typography>
+                                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>{numberOfStudents}</Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                        <Card elevation={3} sx={{ borderRadius: 2, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+                            <CardContent sx={{ color: 'white', textAlign: 'center' }}>
+                                <PersonIcon sx={{ fontSize: 50, mb: 1 }} />
+                                <Typography variant="h5">Teachers</Typography>
+                                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>{numberOfTeachers}</Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                </Grid>
+
+                <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    {getresponse &&
+                        <GreenButton
+                            variant="contained"
+                            size="large"
+                            onClick={() => navigate("/Admin/class/addstudents/" + classID)}
+                            startIcon={<PersonAddAlt1Icon />}
+                        >
+                            Add Students
+                        </GreenButton>
+                    }
+                    {response &&
+                        <GreenButton
+                            variant="contained"
+                            size="large"
+                            onClick={() => navigate("/Admin/addsubject/" + classID)}
+                            startIcon={<PostAddIcon />}
+                        >
+                            Add Subjects
+                        </GreenButton>
+                    }
+                </Box>
+            </Box>
         );
     }
 
     return (
         <>
             {loading ? (
-                <div>Loading...</div>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                    <Typography variant="h4">Loading...</Typography>
+                </Box>
             ) : (
-                <>
-                    <Box sx={{ width: '100%', typography: 'body1', }} >
-                        <TabContext value={value}>
-                            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                                <TabList onChange={handleChange} sx={{ position: 'fixed', width: '100%', bgcolor: 'background.paper', zIndex: 1 }}>
-                                    <Tab label="Details" value="1" />
-                                    <Tab label="Subjects" value="2" />
-                                    <Tab label="Students" value="3" />
-                                    <Tab label="Teachers" value="4" />
-                                </TabList>
-                            </Box>
-                            <Container sx={{ marginTop: "3rem", marginBottom: "4rem" }}>
-                                <TabPanel value="1">
-                                    <ClassDetailsSection />
-                                </TabPanel>
-                                <TabPanel value="2">
-                                    <ClassSubjectsSection />
-                                </TabPanel>
-                                <TabPanel value="3">
-                                    <ClassStudentsSection />
-                                </TabPanel>
-                                <TabPanel value="4">
-                                    <ClassTeachersSection />
-                                </TabPanel>
-                            </Container>
-                        </TabContext>
-                    </Box>
-                </>
+                <Box sx={{ width: '100%', typography: 'body1' }}>
+                    <TabContext value={value}>
+                        {/* Sticky Tab Bar */}
+                        <Paper 
+                            elevation={2} 
+                            sx={{ 
+                                position: 'sticky', 
+                                top: 0, 
+                                zIndex: 1000,
+                                borderRadius: 0,
+                                borderBottom: '1px solid',
+                                borderColor: 'divider'
+                            }}
+                        >
+                            <TabList 
+                                onChange={handleChange} 
+                                variant="fullWidth"
+                                sx={{ 
+                                    '& .MuiTab-root': {
+                                        py: 2,
+                                        fontWeight: 'bold',
+                                        fontSize: '0.9rem',
+                                        textTransform: 'none'
+                                    },
+                                    '& .Mui-selected': {
+                                        fontWeight: 'bold'
+                                    }
+                                }}
+                            >
+                                <Tab icon={<SchoolIcon />} iconPosition="start" label="Details" value="1" />
+                                <Tab icon={<MenuBookIcon />} iconPosition="start" label="Subjects" value="2" />
+                                <Tab icon={<PeopleIcon />} iconPosition="start" label="Students" value="3" />
+                                <Tab icon={<PersonIcon />} iconPosition="start" label="Teachers" value="4" />
+                            </TabList>
+                        </Paper>
+                        
+                        <Container sx={{ mt: 3, mb: 4, minHeight: '80vh' }}>
+                            <TabPanel value="1">
+                                <ClassDetailsSection />
+                            </TabPanel>
+                            <TabPanel value="2">
+                                <ClassSubjectsSection />
+                            </TabPanel>
+                            <TabPanel value="3">
+                                <ClassStudentsSection />
+                            </TabPanel>
+                            <TabPanel value="4">
+                                <ClassTeachersSection />
+                            </TabPanel>
+                        </Container>
+                    </TabContext>
+                </Box>
             )}
             <Popup message={message} setShowPopup={setShowPopup} showPopup={showPopup} />
         </>

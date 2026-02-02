@@ -15,16 +15,13 @@ const PORT = process.env.PORT || 5000
 
 // Global error handlers to prevent crashes
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('❌ UNHANDLED REJECTION:', reason);
+    console.error('UNHANDLED REJECTION:', reason);
     console.error('Promise:', promise);
-    // Log but don't exit - let the server continue
 });
 
 process.on('uncaughtException', (error) => {
-    console.error('❌ UNCAUGHT EXCEPTION:', error);
+    console.error('UNCAUGHT EXCEPTION:', error);
     console.error('Stack:', error.stack);
-    // In production, you might want to exit, but for development we log and continue
-    // process.exit(1);
 });
 
 dotenv.config();
@@ -64,42 +61,29 @@ const upload = multer({
 // Make upload middleware available to routes
 app.set('upload', upload);
 
-// app.use(bodyParser.json({ limit: '10mb', extended: true }))
-// app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }))
-
 app.use(express.json({ limit: '10mb' }))
 
 // CORS configuration - handle preflight requests properly
 const corsOptions = {
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        
-        // Allow localhost for development
         if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
             return callback(null, true);
         }
-        
-        // Allow common patterns for production
         if (origin.match(/^https?:\/\/[^\/]+\.vercel\.app$/) || 
             origin.match(/^https?:\/\/[^\/]+\.netlify\.app$/)) {
             return callback(null, true);
         }
-        
         callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
     credentials: true,
-    optionsSuccessStatus: 204 // Some legacy browsers choke on 200
+    optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
-
-// Handle OPTIONS preflight requests explicitly
 app.options('*', cors(corsOptions));
-
-// Apply rate limiting to all routes
 app.use(generalLimiter);
 
 // Serve uploaded files
@@ -133,50 +117,111 @@ app.get('/routes', (req, res) => {
     res.json({ routes });
 });
 
-mongoose
-    .connect(process.env.MONGO_URL, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-    })
-    .then(console.log("Connected to MongoDB"))
-    .catch((err) => console.log("NOT CONNECTED TO NETWORK", err))
-
-app.use('/', Routes);
-
-// Log all registered routes on startup
-console.log('\n========== REGISTERED ROUTES ==========');
-const registeredRoutes = [];
-app._router.stack.forEach(middleware => {
-    if (middleware.route) {
-        registeredRoutes.push({
-            path: middleware.route.path,
-            methods: Object.keys(middleware.route.methods).join(', ').toUpperCase()
-        });
-    } else if (middleware.name === 'router') {
-        middleware.handle.stack.forEach(handler => {
-            if (handler.route) {
-                registeredRoutes.push({
-                    path: handler.route.path,
-                    methods: Object.keys(handler.route.methods).join(', ').toUpperCase()
-                });
+// MongoDB Connection with retry logic
+const connectDB = async () => {
+    const maxRetries = 5;
+    let retries = 0;
+    
+    const tryConnect = async () => {
+        console.log(`\nAttempting to connect to MongoDB (attempt ${retries + 1}/${maxRetries})...`);
+        console.log(`Connection URL: ${process.env.MONGO_URL ? 'CONFIGURED' : 'NOT SET!'}`);
+        
+        try {
+            await mongoose.connect(process.env.MONGO_URL, {
+                serverSelectionTimeoutMS: 10000,
+                connectTimeoutMS: 10000,
+            });
+            console.log("Connected to MongoDB successfully!");
+            return true;
+        } catch (err) {
+            console.error(`MongoDB Connection Error (attempt ${retries + 1}/${maxRetries}):`);
+            console.error(`Error: ${err.message}`);
+            
+            if (err.message.includes('ECONNREFUSED')) {
+                console.error(`Tip: Make sure MongoDB is running on port 27017`);
             }
-        });
+            
+            retries++;
+            if (retries < maxRetries) {
+                console.log(`Retrying in 5 seconds...\n`);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                return tryConnect();
+            } else {
+                console.error(`\nFailed to connect to MongoDB after ${maxRetries} attempts.`);
+                return false;
+            }
+        }
+    };
+    
+    return await tryConnect();
+};
+
+// Function to log all registered routes
+const logRegisteredRoutes = () => {
+    console.log('\n========== REGISTERED ROUTES ==========');
+    const routes = [];
+    app._router.stack.forEach(middleware => {
+        if (middleware.route) {
+            routes.push({
+                path: middleware.route.path,
+                methods: Object.keys(middleware.route.methods).join(', ').toUpperCase()
+            });
+        } else if (middleware.name === 'router') {
+            middleware.handle.stack.forEach(handler => {
+                if (handler.route) {
+                    routes.push({
+                        path: handler.route.path,
+                        methods: Object.keys(handler.route.methods).join(', ').toUpperCase()
+                    });
+                }
+            });
+        }
+    });
+    routes.forEach(r => console.log(`  ${r.methods.padEnd(15)} ${r.path}`));
+    console.log('=========================================\n');
+};
+
+// Mount API routes BEFORE starting the server
+// This is critical - all API routes must be registered before server starts
+console.log('Mounting API routes...');
+app.use('/', Routes);
+console.log('API routes mounted successfully');
+
+// Start the server
+const startServer = async () => {
+    // Connect to MongoDB first
+    const dbConnected = await connectDB();
+    
+    if (!dbConnected) {
+        console.log('\nWARNING: MongoDB not connected. Server will start but database operations will fail.');
     }
-});
-registeredRoutes.forEach(r => console.log(`  ${r.methods.padEnd(15)} ${r.path}`));
-console.log('=========================================\n');
+    
+    // Start Express server
+    app.listen(PORT, () => {
+        console.log(`\nServer started at port no. ${PORT}`);
+        console.log(`Health check: http://localhost:${PORT}/health`);
+        console.log(`Routes list: http://localhost:${PORT}/routes`);
+        
+        if (dbConnected) {
+            console.log(`\nServer is ready to accept requests!`);
+        } else {
+            console.log(`\nServer is running but MongoDB is NOT connected.`);
+        }
+        
+        // Log routes after server starts
+        logRegisteredRoutes();
+    });
+};
 
-// Filter and log OTP routes specifically
-const otpRoutes = registeredRoutes.filter(r => r.path.includes('OTP') || r.path.includes('Reset'));
-if (otpRoutes.length > 0) {
-    console.log('OTP Routes:');
-    otpRoutes.forEach(r => console.log(`  ✓ ${r.path}`));
-} else {
-    console.log('WARNING: No OTP routes found!');
+// Only start server if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+    startServer();
 }
-console.log('');
 
-// 404 Handler - must be after all routes
+// Export for testing
+module.exports = { app, connectDB };
+
+// 404 Handler - must be after API routes
 app.use((req, res) => {
     console.log(`404 - Route not found: ${req.method} ${req.url}`);
     res.status(404).json({
@@ -187,49 +232,21 @@ app.use((req, res) => {
 
 // Error handler - comprehensive logging for all errors
 app.use((err, req, res, next) => {
-    console.error('═══════════════════════════════════════════');
     console.error('ROUTE ERROR:', req.method, req.url);
     console.error('Error:', err.message);
-    console.error('Stack:', err.stack);
-    console.error('Type:', err.constructor.name);
-    console.error('═══════════════════════════════════════════');
     res.status(500).json({
         message: 'Internal server error',
-        error: err.message,
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        error: err.message
     });
 });
 
-// Add a wrapper for all routes to catch async errors
-const asyncHandler = (fn) => (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch((err) => {
-        console.error('ASYNC ROUTE ERROR:', req.method, req.url);
-        console.error('Error:', err.message);
-        console.error('Stack:', err.stack);
-        res.status(500).json({
-            message: 'Internal server error',
-            error: err.message
-        });
-    });
-};
-
-// backend/index.js or app.js
- 
+// Serve static files from React frontend build
 app.use(express.static(path.join(__dirname, "../frontend/build")));
 
+// Catch-all handler for SPA - must be LAST
 app.get("*", (req, res) => {
   res.sendFile(
     path.join(__dirname, "../frontend/build/index.html")
   );
-})
-
-
-
-
-app.listen(PORT, () => {
-    console.log(`Server started at port no. ${PORT}`)
-    console.log(`Health check: http://localhost:${PORT}/health`)
-    console.log(`Routes list: http://localhost:${PORT}/routes`)
-    console.log(`OTP Debug: http://localhost:${PORT}/routes/otp`)
-})
+});
 

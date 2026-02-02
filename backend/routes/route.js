@@ -11,7 +11,7 @@ const asyncHandler = (fn) => (req, res, next) => {
 
 // Controllers
 const { adminRegister, adminLogIn, getAdminDetail, adminForgotPassword} = require('../controllers/admin-controller.js');
-const { sclassCreate, sclassList, deleteSclass, deleteSclasses, getSclassDetail, getSclassStudents, updateSclass } = require('../controllers/class-controller.js');
+const { sclassCreate, sclassList, deleteSclass, deleteSclasses, getSclassDetail, getSclassStudents, updateSclass, getSclassTeachers } = require('../controllers/class-controller.js');
 const { complainCreate, complainList } = require('../controllers/complain-controller.js');
 const { noticeCreate, noticeList, deleteNotices, deleteNotice, updateNotice } = require('../controllers/notice-controller.js');
 const {
@@ -84,6 +84,7 @@ router.post('/SclassCreate', sclassCreate);
 router.get('/SclassList/:id', sclassList);
 router.get("/Sclass/:id", getSclassDetail)
 router.get("/Sclass/Students/:id", getSclassStudents)
+router.get("/Sclass/Teachers/:id", getSclassTeachers)
 router.delete("/Sclasses/:id", deleteSclasses)
 router.delete("/Sclass/:id", deleteSclass)
 router.put("/Sclass/:id", updateSclass)
