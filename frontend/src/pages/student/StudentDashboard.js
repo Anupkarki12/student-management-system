@@ -24,6 +24,7 @@ import { AppBar, Drawer } from '../../components/styles';
 import StudentHomework from './StudentHomework';
 import StudentExamRoutine from './examRoutineRelated/StudentExamRoutine';
 import StudentNotes from './StudentNotes';
+import StudentResults from './StudentResults';
 
 const StudentDashboard = () => {
     const [open, setOpen] = useState(true);
@@ -86,6 +87,7 @@ const StudentDashboard = () => {
                         <Route path="/Student/complain" element={<StudentComplain />} />
                         <Route path="/Student/homework" element={<StudentHomework />} />
                         <Route path="/Student/exam-routine" element={<StudentExamRoutine />} />
+                        <Route path="/Student/results" element={<StudentResults />} />
 
                         <Route path="/logout" element={<Logout />} />
                     </Routes>
