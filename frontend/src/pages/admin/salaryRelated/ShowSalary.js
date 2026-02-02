@@ -33,7 +33,8 @@ import {
     getAllSalaryRecords,
     deleteSalaryRecord,
     getEmployeesWithSalaryStatus,
-    getSalaryDebugInfo
+    getSalaryDebugInfo,
+    fixSalaryRecords
 } from '../../../redux/salaryRelated/salaryHandle';
 import { getAllTeachers } from '../../../redux/teacherRelated/teacherHandle';
 import { getAllSimpleStaffs } from '../../../redux/staffRelated/staffHandle';
@@ -171,79 +172,127 @@ const ShowSalary = () => {
     };
 
 // Calculate summary counts - handle case-insensitive and missing values
-    const teacherRecords = safeSalaryRecords.filter(r => 
-        r.employeeType && r.employeeType.toLowerCase() === 'teacher'
-    ).length;
-    const staffRecords = safeSalaryRecords.filter(r => 
-        r.employeeType && r.employeeType.toLowerCase() === 'staff'
-    ).length;
-    const totalRecords = safeSalaryRecords.length;
+    // Use unified salary records for all calculations
+    // Teachers with salary configured - use salary data from teacher schema directly
+    const teachersWithSalary = safeTeachers.filter(t => t.salary && t.salary.baseSalary > 0);
+    const staffWithSalary = safeStaffs.filter(s => s.salary && s.salary.baseSalary > 0);
 
-// Calculate total salary amounts from teachers and staff with salary data
-    // This is used for both the fallback and the primary calculation
-    const calculateTotalSalaryFromEmployees = () => {
-        let total = 0;
-        
-        // Sum from teachers with salary
-        safeTeachers.forEach(teacher => {
-            if (teacher.salary && teacher.salary.baseSalary > 0) {
-                total += teacher.salary.netSalary || teacher.salary.baseSalary || 0;
-            }
+    // Build unified salary records from teachers and staff schema data
+    // This is used as a fallback when Salary collection is empty
+    const buildUnifiedSalaryRecords = () => {
+        const records = [];
+
+        // Add records from teachers with salary
+        teachersWithSalary.forEach(teacher => {
+            const allowances = (teacher.salary?.allowances?.houseRent || 0) +
+                (teacher.salary?.allowances?.medical || 0) +
+                (teacher.salary?.allowances?.transport || 0) +
+                (teacher.salary?.allowances?.other || 0);
+            const deductions = (teacher.salary?.deductions?.providentFund || 0) +
+                (teacher.salary?.deductions?.tax || 0) +
+                (teacher.salary?.deductions?.insurance || 0) +
+                (teacher.salary?.deductions?.other || 0);
+            const netSalary = teacher.salary?.netSalary || teacher.salary?.baseSalary || 0;
+
+            records.push({
+                _id: teacher._id,
+                employee: {
+                    _id: teacher._id,
+                    name: teacher.name,
+                    email: teacher.email,
+                    photo: teacher.photo
+                },
+                employeeType: 'teacher',
+                position: teacher.teachSubject?.subName || 'Teacher',
+                baseSalary: teacher.salary?.baseSalary || 0,
+                allowances: teacher.salary?.allowances || {},
+                deductions: teacher.salary?.deductions || {},
+                netSalary,
+                totalAllowances: allowances,
+                totalDeductions: deductions,
+                paymentHistory: [],
+                hasSalaryFromSchema: true
+            });
         });
-        
-        // Sum from staff with salary
-        safeStaffs.forEach(staff => {
-            if (staff.salary && staff.salary.baseSalary > 0) {
-                total += staff.salary.netSalary || staff.salary.baseSalary || 0;
-            }
+
+        // Add records from staff with salary
+        staffWithSalary.forEach(staff => {
+            const allowances = (staff.salary?.allowances?.houseRent || 0) +
+                (staff.salary?.allowances?.medical || 0) +
+                (staff.salary?.allowances?.transport || 0) +
+                (staff.salary?.allowances?.other || 0);
+            const deductions = (staff.salary?.deductions?.providentFund || 0) +
+                (staff.salary?.deductions?.tax || 0) +
+                (staff.salary?.deductions?.insurance || 0) +
+                (staff.salary?.deductions?.other || 0);
+            const netSalary = staff.salary?.netSalary || staff.salary?.baseSalary || 0;
+
+            records.push({
+                _id: staff._id,
+                employee: {
+                    _id: staff._id,
+                    name: staff.name,
+                    email: staff.email,
+                    photo: staff.photo
+                },
+                employeeType: 'staff',
+                position: staff.position || 'Staff',
+                baseSalary: staff.salary?.baseSalary || 0,
+                allowances: staff.salary?.allowances || {},
+                deductions: staff.salary?.deductions || {},
+                netSalary,
+                totalAllowances: allowances,
+                totalDeductions: deductions,
+                paymentHistory: [],
+                hasSalaryFromSchema: true
+            });
         });
-        
-        return total;
+
+        return records;
     };
 
-    // Calculate total salary paid from payment history (all-time)
-    // FIX: Made status check case-insensitive and added more robust logging
-    const totalSalaryPaidFromHistory = safeSalaryRecords.reduce((sum, record) => {
-        if (record.paymentHistory && Array.isArray(record.paymentHistory) && record.paymentHistory.length > 0) {
-            const paidPayments = record.paymentHistory.filter(p => 
-                p.status && p.status.toLowerCase() === 'paid'
-            );
-            const recordTotal = paidPayments.reduce((paymentSum, payment) => {
-                return paymentSum + (payment.amount || 0);
-            }, 0);
-            return sum + recordTotal;
-        }
-        return sum;
-    }, 0);
+    // Use Salary collection records if available, otherwise use schema data
+    const hasValidSalaryRecords = safeSalaryRecords.length > 0;
+    const unifiedSalaryRecords = hasValidSalaryRecords ? safeSalaryRecords : buildUnifiedSalaryRecords();
+
+    // Calculate totals from unified records
+    const calculateTotalSalaryPaid = (records) => {
+        return records.reduce((sum, record) => {
+            if (record.paymentHistory && Array.isArray(record.paymentHistory) && record.paymentHistory.length > 0) {
+                const paidPayments = record.paymentHistory.filter(p =>
+                    p.status && p.status.toLowerCase() === 'paid'
+                );
+                const recordTotal = paidPayments.reduce((paymentSum, payment) => {
+                    return paymentSum + (payment.amount || 0);
+                }, 0);
+                return sum + recordTotal;
+            }
+            // If no payment history, use netSalary as one-time total
+            if (record.netSalary && record.netSalary > 0 && (!record.paymentHistory || record.paymentHistory.length === 0)) {
+                return sum + record.netSalary;
+            }
+            return sum;
+        }, 0);
+    };
+
+    // Count records by type from unified data
+    const teacherRecords = unifiedSalaryRecords.filter(r =>
+        r.employeeType && r.employeeType.toLowerCase() === 'teacher'
+    ).length;
+    const staffRecords = unifiedSalaryRecords.filter(r =>
+        r.employeeType && r.employeeType.toLowerCase() === 'staff'
+    ).length;
+    const totalRecords = unifiedSalaryRecords.length;
+    const totalSalaryPaid = calculateTotalSalaryPaid(unifiedSalaryRecords);
 
     // DEBUG: Log salary records data to diagnose the issue
     console.log('=== SALARY RECORDS DEBUG ===');
-    console.log('Total salary records:', safeSalaryRecords.length);
-    console.log('Sample record:', safeSalaryRecords[0] ? {
-        _id: safeSalaryRecords[0]._id,
-        hasPaymentHistory: !!safeSalaryRecords[0].paymentHistory,
-        paymentHistoryLength: safeSalaryRecords[0].paymentHistory?.length || 0,
-        paymentHistorySample: safeSalaryRecords[0].paymentHistory?.[0] || 'none',
-        baseSalary: safeSalaryRecords[0].baseSalary
-    } : 'no records');
-    console.log('Total Salary Paid from history:', totalSalaryPaidFromHistory);
-    console.log('Teachers count:', safeTeachers.length);
-    console.log('Staff count:', safeStaffs.length);
-    console.log('Teachers with salary:', safeTeachers.filter(t => t.salary?.baseSalary > 0).length);
-    console.log('Staff with salary:', safeStaffs.filter(s => s.salary?.baseSalary > 0).length);
-    console.log('Total from employee salaries:', calculateTotalSalaryFromEmployees());
+    console.log('Total salary records from API:', safeSalaryRecords.length);
+    console.log('Teachers with salary in schema:', teachersWithSalary.length);
+    console.log('Staff with salary in schema:', staffWithSalary.length);
+    console.log('Unified salary records (used for display):', totalRecords);
+    console.log('Total salary paid:', totalSalaryPaid);
     console.log('===========================');
-
-    // Use payment history total if available, otherwise use employee salary data as fallback
-    // The fallback calculation uses teachers' and staff's salary field which is updated when salaries are configured
-    // FIX: Add defensive check to prevent undefined reference
-    const totalSalaryPaid = (totalSalaryPaidFromHistory > 0 || calculateTotalSalaryFromEmployees() > 0) 
-        ? (totalSalaryPaidFromHistory > 0 ? totalSalaryPaidFromHistory : calculateTotalSalaryFromEmployees())
-        : 0;
-
-// Teachers with salary configured
-    const teachersWithSalary = safeTeachers.filter(t => t.salary && t.salary.baseSalary > 0);
-    const staffWithSalary = safeStaffs.filter(s => s.salary && s.salary.baseSalary > 0);
 
     // Month/Year filter state
     const [selectedMonth, setSelectedMonth] = useState('All');
@@ -276,11 +325,12 @@ const ShowSalary = () => {
         if (schoolId) {
             setLoadingEmployees(true);
             
-            // Use actual selected values, or default to current month/year if "All"
-            const effectiveMonth = selectedMonth !== 'All' ? selectedMonth : months[new Date().getMonth()];
-            const effectiveYear = selectedYear !== 'All' ? selectedYear : currentYear.toString();
+            // FIX: When "All" is selected, pass "All" to backend instead of defaulting to current values
+            // Backend will handle the "All" case appropriately
+            const effectiveMonth = selectedMonth !== 'All' ? selectedMonth : null;
+            const effectiveYear = selectedYear !== 'All' ? selectedYear : null;
             
-            console.log(`Fetching employees with salary status - Month: ${effectiveMonth}, Year: ${effectiveYear}`);
+            console.log(`Fetching employees with salary status - Month: ${effectiveMonth || 'All'}, Year: ${effectiveYear || 'All'}`);
             
             // Fetch teachers
             dispatch(getEmployeesWithSalaryStatus(schoolId, 'teacher', effectiveMonth, effectiveYear))
@@ -554,26 +604,29 @@ const ShowSalary = () => {
             </Card>
 
             <Grid container spacing={2} sx={{ mb: 3 }}>
+                {/* Total Salary Records Card */}
                 <Grid item xs={12} sm={4}>
                     <Card sx={{ bgcolor: '#e3f2fd' }}>
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <AttachMoney color="primary" />
                                 <Typography variant="subtitle2" color="textSecondary">
-                                    Total Salary Paid
+                                    Salary Records
                                 </Typography>
                             </Box>
                             <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1, color: 'primary.main' }}>
-                                {formatCurrency(totalSalaryPaid)}
+                                {totalRecords}
                             </Typography>
                             <Typography variant="caption" color="textSecondary">
-                                {totalSalaryPaidFromHistory > 0 
-                                    ? 'Teachers & Staff (All Time)'
-                                    : 'Based on Configured Salaries'}
+                                {totalRecords === 0 
+                                    ? 'No salary records found'
+                                    : `${teacherRecords} teachers, ${staffRecords} staff`}
                             </Typography>
                         </CardContent>
                     </Card>
                 </Grid>
+
+                {/* Total Teachers Card */}
                 <Grid item xs={12} sm={4}>
                     <Card sx={{ bgcolor: '#e8f5e9' }}>
                         <CardContent>
@@ -586,9 +639,14 @@ const ShowSalary = () => {
                             <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1, color: 'success.main' }}>
                                 {totalTeachers}
                             </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                                {teachersWithSalary.length} with salary configured
+                            </Typography>
                         </CardContent>
                     </Card>
                 </Grid>
+
+                {/* Total Staff Card */}
                 <Grid item xs={12} sm={4}>
                     <Card sx={{ bgcolor: '#fff3e0' }}>
                         <CardContent>
@@ -600,6 +658,33 @@ const ShowSalary = () => {
                             </Box>
                             <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1, color: 'warning.main' }}>
                                 {totalStaffs}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                                {staffWithSalary.length} with salary configured
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                </Grid>
+            </Grid>
+
+            {/* Total Salary Paid Card - Shown separately */}
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12}>
+                    <Card sx={{ bgcolor: '#f3e5f5' }}>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <AttachMoney color="secondary" />
+                                <Typography variant="subtitle2" color="textSecondary">
+                                    Total Salary Paid (All Time)
+                                </Typography>
+                            </Box>
+                            <Typography variant="h4" sx={{ fontWeight: 'bold', mt: 1, color: 'secondary.main' }}>
+                                {formatCurrency(totalSalaryPaid)}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                                {totalSalaryPaid > 0
+                                    ? 'Based on salary data'
+                                    : 'No payments recorded yet'}
                             </Typography>
                         </CardContent>
                     </Card>

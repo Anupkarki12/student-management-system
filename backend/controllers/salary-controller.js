@@ -539,8 +539,39 @@ const salaryController = {
                     return { isPaid: false, lastPaid: null, currentMonthPaid: false };
                 }
                 
-                // If query month/year provided, check if paid for that specific month
-                if (queryMonth && queryYear) {
+                // If query month provided, check if paid for that specific month
+                if (queryMonth) {
+                    // Handle "All Years" case - check if paid in ANY year for the selected month
+                    if (queryYear === 'All' || !queryYear) {
+                        // Find any payment for the selected month in any year
+                        const paymentsForMonth = salary.paymentHistory.filter(
+                            p => p.month === queryMonth && p.status === 'paid'
+                        );
+                        
+                        if (paymentsForMonth.length > 0) {
+                            // Get the most recent payment for this month
+                            const sortedPayments = paymentsForMonth.sort(
+                                (a, b) => new Date(b.paymentDate) - new Date(a.paymentDate)
+                            );
+                            const lastPayment = sortedPayments[0];
+                            return { 
+                                isPaid: true, 
+                                lastPaid: { month: lastPayment.month, year: lastPayment.year, status: lastPayment.status },
+                                currentMonthPaid: true,
+                                paymentAmount: lastPayment.amount,
+                                allYears: true
+                            };
+                        }
+                        // No payment found for this month in any year
+                        return { 
+                            isPaid: false, 
+                            lastPaid: null,
+                            currentMonthPaid: false,
+                            allYears: true
+                        };
+                    }
+                    
+                    // Specific year provided - check for exact month/year match
                     const payment = salary.paymentHistory.find(
                         p => p.month === queryMonth && p.year === parseInt(queryYear)
                     );
@@ -552,7 +583,7 @@ const salaryController = {
                             paymentAmount: payment.amount
                         };
                     }
-                    // If no payment found for this month, return null to indicate not paid
+                    // If no payment found for this month/year, return null to indicate not paid
                     return { 
                         isPaid: false, 
                         lastPaid: null,

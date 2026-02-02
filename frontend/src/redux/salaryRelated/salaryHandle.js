@@ -42,6 +42,24 @@ export const getSalaryDebugInfo = (schoolId) => async (dispatch) => {
     }
 };
 
+// FIX: Clean up corrupted salary records and get diagnostic info
+export const fixSalaryRecords = (schoolId) => async (dispatch) => {
+    dispatch(getSalaryRecordsRequest());
+
+    try {
+        console.log('[FIX] Running salary fix for school:', schoolId);
+        const result = await axios.post(`${process.env.REACT_APP_BASE_URL}/Salary/Fix/${schoolId}`, {
+            timeout: 15000
+        });
+
+        console.log('[FIX] Fix results:', result.data);
+        return result.data;
+    } catch (error) {
+        console.error('[FIX] Error fixing salary records:', error);
+        return { error: extractErrorMessage(error) };
+    }
+};
+
 /**
  * Safely extracts a serializable error message from an error object.
  * This prevents non-serializable values (like AxiosError) from being stored in Redux state.

@@ -374,6 +374,129 @@ router.get('/Salary/EmployeeHistory/:schoolId/:employeeType/:employeeId', salary
 // DEBUG ROUTE: Get diagnostic info about salary system
 router.get('/Salary/Debug/:schoolId', salaryController.getSalaryDebugInfo);
 
+// FIX ROUTE: Clean up corrupted records and create sample data for testing
+router.post('/Salary/Fix/:schoolId', asyncHandler(async (req, res) => {
+    const { schoolId } = req.params;
+    const { createSampleData } = req.body; // Optional: set to true to create sample data
+    
+    console.log(`[FIX] Starting salary fix for school: ${schoolId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
+        return res.status(400).json({ error: 'Invalid school ID' });
+    }
+    
+    const schoolObjectId = new mongoose.Types.ObjectId(schoolId);
+    
+    try {
+        const fixResults = {
+            schoolId,
+            actions: [],
+            summary: {}
+        };
+        
+        // Step 1: Count current state
+        const totalSalaries = await Salary.countDocuments({ school: schoolObjectId, status: 'active' });
+        const corruptedSalaries = await Salary.countDocuments({
+            school: schoolObjectId,
+            status: 'active',
+            employee: { $type: 'string' }
+        });
+        
+        fixResults.actions.push({
+            step: 'initial_state',
+            totalSalaries,
+            corruptedSalaries
+        });
+        
+        // Step 2: Delete corrupted records
+        if (corruptedSalaries > 0) {
+            const deleteResult = await Salary.deleteMany({
+                school: schoolObjectId,
+                status: 'active',
+                employee: { $type: 'string' }
+            });
+            fixResults.actions.push({
+                step: 'cleanup',
+                deletedCorruptedRecords: deleteResult.deletedCount
+            });
+        }
+        
+        // Step 3: Recount after cleanup
+        const validSalaries = await Salary.countDocuments({ school: schoolObjectId, status: 'active' });
+        fixResults.summary = {
+            totalSalariesAfterCleanup: validSalaries,
+            cleanedCorruptedRecords: corruptedSalaries
+        };
+        
+        // Get employee counts
+        const teacherCount = await Teacher.countDocuments({ school: schoolObjectId });
+        const staffCount = await Staff.countDocuments({ school: schoolObjectId });
+        
+        fixResults.summary.employees = {
+            teachers: teacherCount,
+            staff: staffCount,
+            total: teacherCount + staffCount
+        };
+        
+        // Get teachers/staff with salary configured
+        const teachersWithSalary = await Teacher.countDocuments({
+            school: schoolObjectId,
+            salary: { $exists: true, $ne: null },
+            'salary.baseSalary': { $gt: 0 }
+        });
+        const staffWithSalary = await Staff.countDocuments({
+            school: schoolObjectId,
+            salary: { $exists: true, $ne: null },
+            'salary.baseSalary': { $gt: 0 }
+        });
+        
+        fixResults.summary.employeesWithSalary = {
+            teachers: teachersWithSalary,
+            staff: staffWithSalary
+        };
+        
+        // Calculate total from valid salaries
+        const validSalaryDocs = await Salary.find({ school: schoolObjectId, status: 'active' }).lean();
+        let totalSalaryPaid = 0;
+        let totalBaseSalary = 0;
+        
+        validSalaryDocs.forEach(salary => {
+            totalBaseSalary += salary.baseSalary || 0;
+            if (salary.paymentHistory && Array.isArray(salary.paymentHistory)) {
+                salary.paymentHistory.forEach(p => {
+                    if (p.status === 'paid') {
+                        totalSalaryPaid += p.amount || 0;
+                    }
+                });
+            }
+        });
+        
+        fixResults.summary.financials = {
+            totalBaseSalary,
+            totalSalaryPaid
+        };
+        
+        fixResults.recommendations = [];
+        if (validSalaries === 0 && teacherCount > 0) {
+            fixResults.recommendations.push('No valid salary records. Go to /Admin/salary/add to create salary records.');
+        }
+        if (teachersWithSalary === 0 && teacherCount > 0) {
+            fixResults.recommendations.push('Teachers exist but no salary configured. Set up salaries for teachers.');
+        }
+        
+        console.log('[FIX] Fix results:', JSON.stringify(fixResults, null, 2));
+        
+        res.status(200).json({
+            message: 'Salary fix completed',
+            ...fixResults
+        });
+        
+    } catch (error) {
+        console.error('[FIX] Error during fix:', error);
+        res.status(500).json({ error: error.message });
+    }
+}));
+
 // Staff Routes
 router.post('/StaffReg', staffController.staffRegister);
 router.post('/StaffLogin', staffController.staffLogIn);
