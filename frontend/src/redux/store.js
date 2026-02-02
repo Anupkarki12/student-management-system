@@ -10,6 +10,7 @@ import { documentReducer } from './documentRelated/documentSlice';
 import staffReducer from './staffRelated/staffSlice';
 import parentReducer from './parentRelated/parentSlice';
 import salaryReducer from './salaryRelated/salarySlice';
+import marksReducer from './marksRelated/marksSlice';
 
 // Paths that may contain non-serializable values (error objects, Date objects, etc.)
 const ignoredPaths = [
@@ -39,7 +40,8 @@ const store = configureStore({
         document: documentReducer,
         staff: staffReducer,
         parent: parentReducer,
-        salary: salaryReducer
+        salary: salaryReducer,
+        marks: marksReducer
     },
     // Configure middleware to be more lenient with non-serializable values in development
     middleware: (getDefaultMiddleware) =>

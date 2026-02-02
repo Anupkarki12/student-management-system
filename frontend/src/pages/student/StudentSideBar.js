@@ -12,6 +12,7 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import HomeworkIcon from '@mui/icons-material/HomeWork';
 import QuizIcon from '@mui/icons-material/Quiz';
 import NotesIcon from '@mui/icons-material/Notes';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 
 const StudentSideBar = () => {
     const location = useLocation();
@@ -65,6 +66,12 @@ const StudentSideBar = () => {
                         <AnnouncementOutlinedIcon color={location.pathname.startsWith("/Student/complain") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Complain" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Student/results">
+                    <ListItemIcon>
+                        <AssessmentIcon color={location.pathname.startsWith("/Student/results") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Results" />
                 </ListItemButton>
             </React.Fragment>
             <Divider sx={{ my: 1 }} />
