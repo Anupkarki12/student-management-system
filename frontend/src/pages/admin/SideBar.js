@@ -109,9 +109,15 @@ const SideBar = () => {
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Admin/attendance">
                     <ListItemIcon>
-                        <CheckCircleIcon color={location.pathname.startsWith("/Admin/attendance") ? 'primary' : 'inherit'} />
+                        <CheckCircleIcon color={location.pathname.startsWith("/Admin/attendance") && !location.pathname.startsWith("/Admin/teacher-attendance") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
-                    <ListItemText primary="Attendance" />
+                    <ListItemText primary="Student Attendance" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Admin/teacher-attendance">
+                    <ListItemIcon>
+                        <CheckCircleIcon color={location.pathname.startsWith("/Admin/teacher-attendance") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Teacher Attendance" />
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Admin/notices">
                     <ListItemIcon>
