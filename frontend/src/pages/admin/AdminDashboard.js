@@ -68,6 +68,9 @@ import AddParent from './parentRelated/AddParent';
 import ShowParents from './parentRelated/ShowParents';
 import ParentDetails from './parentRelated/ParentDetails';
 
+// ID Card Generation
+import GenerateIDCard from './studentRelated/GenerateIDCard';
+
 const AdminDashboard = () => {
     const [open, setOpen] = useState(false);
     const toggleDrawer = () => setOpen(!open);
@@ -147,6 +150,7 @@ const AdminDashboard = () => {
                     <Route path="/Admin/students/student/:id" element={<ViewStudent />} />
                     <Route path="/Admin/students/student/attendance/:id" element={<StudentAttendance situation="Student" />} />
                     <Route path="/Admin/students/student/marks/:id" element={<StudentExamMarks situation="Student" />} />
+                    <Route path="/Admin/generate-id-cards" element={<GenerateIDCard />} />
 
                     {/* Teacher */}
                     <Route path="/Admin/teachers" element={<ShowTeachers />} />
@@ -240,4 +244,3 @@ const MainContent = styled(Box)`
     padding: 24px;
     background: #f0f2f5;
 `;
-

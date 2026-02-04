@@ -43,6 +43,7 @@ import { underControl } from '../../../redux/salaryRelated/salarySlice';
 import Popup from '../../../components/Popup';
 import { GreenButton } from '../../../components/buttonStyles';
 import { exportToExcel, getCurrentDateString } from '../../../utils/excelExport';
+import axios from 'axios';
 
 const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-NP', {
@@ -311,6 +312,76 @@ const ShowSalary = () => {
                     'July', 'August', 'September', 'October', 'November', 'December'];
     const currentYear = new Date().getFullYear();
     const years = ['All', ...Array.from({ length: 10 }, (_, i) => currentYear - i)];
+
+    // Convert month name to number
+    const getMonthNumber = (monthName) => {
+        const monthsMap = {
+            'January': 1, 'February': 2, 'March': 3, 'April': 4,
+            'May': 5, 'June': 6, 'July': 7, 'August': 8,
+            'September': 9, 'October': 10, 'November': 11, 'December': 12
+        };
+        return monthsMap[monthName] || null;
+    };
+
+    // State for attendance data
+    const [teacherAttendanceData, setTeacherAttendanceData] = useState({});
+    const [staffAttendanceData, setStaffAttendanceData] = useState({});
+    const [loadingAttendance, setLoadingAttendance] = useState(false);
+
+    // Fetch attendance data when month/year filter changes
+    useEffect(() => {
+        const fetchAttendanceData = async () => {
+            if (!schoolId || selectedMonth === 'All' || selectedYear === 'All') {
+                setTeacherAttendanceData({});
+                setStaffAttendanceData({});
+                return;
+            }
+
+            setLoadingAttendance(true);
+            const monthNum = getMonthNumber(selectedMonth);
+            const yearNum = parseInt(selectedYear);
+
+            try {
+                // Fetch teacher attendance
+                const teacherAttData = {};
+                for (const teacher of teachersWithSalary) {
+                    try {
+                        const result = await axios.get(
+                            `${process.env.REACT_APP_BASE_URL}/Teacher/Attendance/${teacher._id}?month=${monthNum}&year=${yearNum}`
+                        );
+                        if (result.data && result.data.summary) {
+                            teacherAttData[teacher._id] = result.data.summary;
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching attendance for teacher ${teacher._id}:`, err);
+                    }
+                }
+                setTeacherAttendanceData(teacherAttData);
+
+                // Fetch staff attendance
+                const staffAttData = {};
+                for (const staff of staffWithSalary) {
+                    try {
+                        const result = await axios.get(
+                            `${process.env.REACT_APP_BASE_URL}/Staff/Attendance/${staff._id}?month=${monthNum}&year=${yearNum}`
+                        );
+                        if (result.data && result.data.summary) {
+                            staffAttData[staff._id] = result.data.summary;
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching attendance for staff ${staff._id}:`, err);
+                    }
+                }
+                setStaffAttendanceData(staffAttData);
+            } catch (error) {
+                console.error('Error fetching attendance data:', error);
+            } finally {
+                setLoadingAttendance(false);
+            }
+        };
+
+        fetchAttendanceData();
+    }, [schoolId, selectedMonth, selectedYear, teachersWithSalary, staffWithSalary]);
 
     // Debug: Log Redux state when employeesWithSalary changes
     useEffect(() => {
@@ -1037,6 +1108,9 @@ const ShowSalary = () => {
                                     <TableCell align="right">Allowances</TableCell>
                                     <TableCell align="right">Deductions</TableCell>
                                     <TableCell align="right">Net Salary</TableCell>
+                                    {selectedMonth !== 'All' && selectedYear !== 'All' && (
+                                        <TableCell align="center">Present Days</TableCell>
+                                    )}
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -1050,6 +1124,7 @@ const ShowSalary = () => {
                                         (teacher.salary?.deductions?.insurance || 0) +
                                         (teacher.salary?.deductions?.other || 0);
                                     const netSalary = teacher.salary?.netSalary || teacher.salary?.baseSalary || 0;
+                                    const attendance = teacherAttendanceData[teacher._id];
 
                                     return (
                                         <TableRow key={teacher._id} hover>
@@ -1081,6 +1156,21 @@ const ShowSalary = () => {
                                                     {formatCurrency(netSalary)}
                                                 </Typography>
                                             </TableCell>
+                                            {selectedMonth !== 'All' && selectedYear !== 'All' && (
+                                                <TableCell align="center">
+                                                    {loadingAttendance ? (
+                                                        <Typography variant="caption" color="textSecondary">Loading...</Typography>
+                                                    ) : attendance ? (
+                                                        <Chip 
+                                                            label={`${attendance.presentDays || 0} days`}
+                                                            color={attendance.presentDays > 0 ? 'success' : 'default'}
+                                                            size="small"
+                                                        />
+                                                    ) : (
+                                                        <Typography variant="caption" color="textSecondary">-</Typography>
+                                                    )}
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     );
                                 })}
@@ -1106,6 +1196,9 @@ const ShowSalary = () => {
                                     <TableCell align="right">Allowances</TableCell>
                                     <TableCell align="right">Deductions</TableCell>
                                     <TableCell align="right">Net Salary</TableCell>
+                                    {selectedMonth !== 'All' && selectedYear !== 'All' && (
+                                        <TableCell align="center">Present Days</TableCell>
+                                    )}
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -1119,6 +1212,7 @@ const ShowSalary = () => {
                                         (staff.salary?.deductions?.insurance || 0) +
                                         (staff.salary?.deductions?.other || 0);
                                     const netSalary = staff.salary?.netSalary || staff.salary?.baseSalary || 0;
+                                    const attendance = staffAttendanceData[staff._id];
 
                                     return (
                                         <TableRow key={staff._id} hover>
@@ -1150,6 +1244,21 @@ const ShowSalary = () => {
                                                     {formatCurrency(netSalary)}
                                                 </Typography>
                                             </TableCell>
+                                            {selectedMonth !== 'All' && selectedYear !== 'All' && (
+                                                <TableCell align="center">
+                                                    {loadingAttendance ? (
+                                                        <Typography variant="caption" color="textSecondary">Loading...</Typography>
+                                                    ) : attendance ? (
+                                                        <Chip 
+                                                            label={`${attendance.presentDays || 0} days`}
+                                                            color={attendance.presentDays > 0 ? 'success' : 'default'}
+                                                            size="small"
+                                                        />
+                                                    ) : (
+                                                        <Typography variant="caption" color="textSecondary">-</Typography>
+                                                    )}
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     );
                                 })}

@@ -32,6 +32,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import LinkIcon from '@mui/icons-material/Link';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import BadgeIcon from '@mui/icons-material/Badge';
 import { exportToExcel, getCurrentDateString } from '../../../utils/excelExport';
 import axios from 'axios';
 
@@ -192,6 +193,11 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
             icon: <PersonAddAlt1Icon color="primary" />,
             name: 'Add New Student',
             action: () => navigate("/Admin/addstudents")
+        },
+        {
+            icon: <BadgeIcon color="secondary" />,
+            name: 'Generate ID Cards',
+            action: () => navigate("/Admin/generate-id-cards")
         },
         {
             icon: <PersonRemoveIcon color="error" />,

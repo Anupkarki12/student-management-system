@@ -195,7 +195,7 @@ const staffController = {
         }
     },
 
-    // Get staff attendance report
+// Get staff attendance report
     getStaffAttendanceReport: async (req, res) => {
         try {
             const { id } = req.params;
@@ -218,7 +218,16 @@ const staffController = {
 
             res.send({
                 attendance,
-                summary: { present, absent, leave, total: attendance.length }
+                summary: { 
+                    present, 
+                    absent, 
+                    leave, 
+                    total: attendance.length,
+                    workingDays: attendance.length,
+                    presentDays: present,
+                    absentDays: absent,
+                    leaveDays: leave
+                }
             });
         } catch (error) {
             res.status(500).json(error);

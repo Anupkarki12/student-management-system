@@ -230,6 +230,51 @@ const teacherAttendance = async (req, res) => {
     }
 };
 
+// Get teacher attendance report with month/year filtering
+const getTeacherAttendanceReport = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { month, year } = req.query;
+
+        const teacher = await Teacher.findById(id);
+        if (!teacher) {
+            return res.send({ message: 'Teacher not found' });
+        }
+
+        let attendance = teacher.attendance || [];
+
+        // Filter by month and year if provided
+        if (month || year) {
+            attendance = attendance.filter(a => {
+                const attDate = new Date(a.date);
+                const monthMatch = month ? attDate.getMonth() + 1 === parseInt(month) : true;
+                const yearMatch = year ? attDate.getFullYear() === parseInt(year) : true;
+                return monthMatch && yearMatch;
+            });
+        }
+
+        const present = attendance.filter(a => a.status === 'Present').length;
+        const absent = attendance.filter(a => a.status === 'Absent').length;
+        const leave = attendance.filter(a => a.status === 'Leave').length;
+
+        res.send({
+            attendance,
+            summary: { 
+                present, 
+                absent, 
+                leave, 
+                total: attendance.length,
+                workingDays: attendance.length,
+                presentDays: present,
+                absentDays: absent,
+                leaveDays: leave
+            }
+        });
+    } catch (error) {
+        res.status(500).json(error);
+    }
+};
+
 module.exports = {
     teacherRegister,
     teacherLogIn,
@@ -240,5 +285,6 @@ module.exports = {
     deleteTeacher,
     deleteTeachers,
     deleteTeachersByClass,
-    teacherAttendance
+    teacherAttendance,
+    getTeacherAttendanceReport
 };
