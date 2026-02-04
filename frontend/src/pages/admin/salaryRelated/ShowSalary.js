@@ -1,4 +1,4 @@
- import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -27,7 +27,8 @@ import {
     HelpOutline,
     Settings,
     People,
-    AttachMoney
+    AttachMoney,
+    FileDownload as FileDownloadIcon
 } from '@mui/icons-material';
 import {
     getAllSalaryRecords,
@@ -40,6 +41,8 @@ import { getAllTeachers } from '../../../redux/teacherRelated/teacherHandle';
 import { getAllSimpleStaffs } from '../../../redux/staffRelated/staffHandle';
 import { underControl } from '../../../redux/salaryRelated/salarySlice';
 import Popup from '../../../components/Popup';
+import { GreenButton } from '../../../components/buttonStyles';
+import { exportToExcel, getCurrentDateString } from '../../../utils/excelExport';
 
 const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-NP', {
@@ -469,6 +472,43 @@ const ShowSalary = () => {
         );
     }
 
+    // Export salary records to Excel
+    const handleExportSalary = () => {
+        const allEmployees = [...filteredTeachers, ...filteredStaff];
+        
+        if (allEmployees.length === 0) {
+            alert('No salary records to export');
+            return;
+        }
+
+        const exportData = allEmployees.map((emp) => ({
+            'Employee Name': emp.name || 'N/A',
+            'Email': emp.email || 'N/A',
+            'Type': emp.employeeType ? emp.employeeType.charAt(0).toUpperCase() + emp.employeeType.slice(1) : 'N/A',
+            'Position': emp.position || 'N/A',
+            'Base Salary (NPR)': emp.baseSalary || 0,
+            'House Rent (NPR)': emp.salary?.allowances?.houseRent || 0,
+            'Medical (NPR)': emp.salary?.allowances?.medical || 0,
+            'Transport (NPR)': emp.salary?.allowances?.transport || 0,
+            'Other Allowances (NPR)': emp.salary?.allowances?.other || 0,
+            'Total Allowances (NPR)': emp.totalAllowances || 0,
+            'Provident Fund (NPR)': emp.salary?.deductions?.providentFund || 0,
+            'Tax (NPR)': emp.salary?.deductions?.tax || 0,
+            'Insurance (NPR)': emp.salary?.deductions?.insurance || 0,
+            'Other Deductions (NPR)': emp.salary?.deductions?.other || 0,
+            'Total Deductions (NPR)': emp.totalDeductions || 0,
+            'Net Salary (NPR)': emp.netSalary || 0,
+            'Payment Status': emp.isPaidForSelectedMonth ? 'Paid' : 'Unpaid',
+            'Selected Month': selectedMonth !== 'All' ? selectedMonth : 'All',
+            'Selected Year': selectedYear !== 'All' ? selectedYear : 'All'
+        }));
+
+        const monthSuffix = selectedMonth !== 'All' ? `_${selectedMonth.replace(' ', '_')}` : '_AllMonths';
+        const yearSuffix = selectedYear !== 'All' ? `_${selectedYear}` : '_AllYears';
+        const fileName = `Salary_Report${monthSuffix}${yearSuffix}_${getCurrentDateString()}`;
+        exportToExcel(exportData, fileName, 'Salary Records');
+    };
+
     return (
         <Box sx={{ p: 3 }}>
             {/* Header */}
@@ -492,6 +532,15 @@ const ShowSalary = () => {
                     >
                         Refresh
                     </Button>
+                    <GreenButton
+                        variant="contained"
+                        startIcon={<FileDownloadIcon />}
+                        onClick={handleExportSalary}
+                        disabled={filteredTeachers.length === 0 && filteredStaff.length === 0}
+                        sx={{ bgcolor: '#4caf50', '&:hover': { bgcolor: '#388e3c' } }}
+                    >
+                        Export Excel
+                    </GreenButton>
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}

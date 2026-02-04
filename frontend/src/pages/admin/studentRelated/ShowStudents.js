@@ -10,6 +10,7 @@ import TableTemplate from '../../../components/TableTemplate';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import SpeedDialTemplate from '../../../components/SpeedDialTemplate';
 import Popup from '../../../components/Popup';
+import ParentChooser from '../../../components/ParentChooser';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import { KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
@@ -18,14 +19,21 @@ import Grow from '@mui/material/Grow';
 import Popper from '@mui/material/Popper';
 import MenuItem from '@mui/material/MenuItem';
 import MenuList from '@mui/material/MenuList';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import {
     Paper, Box, IconButton, Grid, Card, CardContent, CardActions,
-    Typography, Chip, Breadcrumbs, Link, CircularProgress, Avatar
+    Typography, Chip, Breadcrumbs, Link, CircularProgress, Avatar, Snackbar, Alert
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PersonIcon from '@mui/icons-material/Person';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import LinkIcon from '@mui/icons-material/Link';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { exportToExcel, getCurrentDateString } from '../../../utils/excelExport';
+import axios from 'axios';
 
 const ShowStudents = () => {
     const navigate = useNavigate();
@@ -45,6 +53,13 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
     const [viewMode, setViewMode] = useState('classes'); // 'classes', 'students', 'details'
     const [selectedClass, setSelectedClass] = useState(null);
     const [showPopup, setShowPopup] = useState(false);
+
+    // Parent linking state
+    const [linkParentOpen, setLinkParentOpen] = useState(false);
+    const [selectedStudentForLink, setSelectedStudentForLink] = useState(null);
+    const [selectedParent, setSelectedParent] = useState(null);
+    const [linkingInProgress, setLinkingInProgress] = useState(false);
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
     useEffect(() => {
         if (viewMode === 'classes') {
@@ -185,6 +200,55 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
         },
     ];
 
+    // Helper function to safely get parent name (father first, then mother, then guardian)
+    const getParentName = (p) => {
+        if (!p) return '';
+        if (p.fatherName && p.fatherName.trim()) return p.fatherName;
+        if (p.motherName && p.motherName.trim()) return p.motherName;
+        if (p.guardianName && p.guardianName.trim()) return p.guardianName;
+        return '';
+    };
+
+    // Helper function to safely get parent email
+    const getParentEmail = (p) => {
+        if (!p) return '';
+        if (p.fatherEmail && p.fatherEmail.trim()) return p.fatherEmail;
+        if (p.motherEmail && p.motherEmail.trim()) return p.motherEmail;
+        if (p.guardianEmail && p.guardianEmail.trim()) return p.guardianEmail;
+        return '';
+    };
+
+    // Helper function to safely get parent ID
+    const getParentID = (p) => {
+        if (!p) return '';
+        if (p._id) return String(p._id);
+        return '';
+    };
+
+    // Helper function to format date
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '';
+            return date.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        } catch (e) {
+            return '';
+        }
+    };
+
+    // Helper function to safely get field value
+    const getFieldValue = (value) => {
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'string') return value.trim() || '';
+        if (typeof value === 'number') return value;
+        return '';
+    };
+
     // Export students to Excel
     const handleExportStudents = () => {
         if (!studentsList || studentsList.length === 0) {
@@ -197,56 +261,97 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
         const exportData = studentsList.map((student) => {
             const parent = student.parent;
             console.log(`Student: ${student.name}, Parent:`, parent);
-            
-            // Helper function to safely get parent name (father first, then mother, then guardian)
-            const getParentName = (p) => {
-                if (!p) return '-';
-                if (p.fatherName) return p.fatherName;
-                if (p.motherName) return p.motherName;
-                if (p.guardianName) return p.guardianName;
-                return '-';
-            };
-
-            // Helper function to safely get parent email
-            const getParentEmail = (p) => {
-                if (!p) return '-';
-                if (p.fatherEmail) return p.fatherEmail;
-                if (p.motherEmail) return p.motherEmail;
-                if (p.guardianEmail) return p.guardianEmail;
-                return '-';
-            };
-
-            // Helper function to safely get parent ID
-            const getParentID = (p) => {
-                if (!p) return '-';
-                if (p._id) return String(p._id);
-                return '-';
-            };
 
             return {
-                'Student ID': student._id || '-',
-                'Class': student.sclassName?.sclassName || 'N/A',
-                'Section': student.sclassName?.section || '-',
-                'Roll No': student.rollNum || '-',
-                'Name': student.name || '-',
-                'Address': student.address || '-',
-                'DOB': student.dob || '-',
+                'Student ID': getFieldValue(student._id),
+                'Class': student.sclassName?.sclassName || '',
+                'Roll No': getFieldValue(student.rollNum),
+                'Name': getFieldValue(student.name),
+                'Address': getFieldValue(student.address),
+                'DOB': formatDate(student.dob),
                 'Parent ID': getParentID(parent),
                 'Parent Name': getParentName(parent),
                 'Parent Gmail': getParentEmail(parent),
-                'Father Name': parent?.fatherName || '-',
-                'Father Phone': parent?.fatherPhone || '-',
-                'Mother Name': parent?.motherName || '-',
-                'Mother Phone': parent?.motherPhone || '-',
-                'Guardian Name': parent?.guardianName || '-',
-                'Guardian Phone': parent?.guardianPhone || '-',
-                'Guardian Relation': parent?.guardianRelation || '-',
+                'Father Name': getFieldValue(parent?.fatherName),
+                'Father Phone': getFieldValue(parent?.fatherPhone),
+                'Mother Name': getFieldValue(parent?.motherName),
+                'Mother Phone': getFieldValue(parent?.motherPhone),
+                'Guardian Name': getFieldValue(parent?.guardianName),
+                'Guardian Phone': getFieldValue(parent?.guardianPhone),
+                'Guardian Relation': getFieldValue(parent?.guardianRelation),
             };
         });
 
         console.log("Export data prepared:", exportData);
         const fileName = `Students_${selectedClass?.sclassName || 'All'}_${getCurrentDateString()}`;
         exportToExcel(exportData, fileName, 'Students');
+    };
+
+    // Open parent chooser dialog for linking
+    const handleOpenLinkParent = (student) => {
+        setSelectedStudentForLink(student);
+        setSelectedParent(null);
+        setLinkParentOpen(true);
+    };
+
+    // Handle parent selection from chooser
+    const handleParentSelect = (parent) => {
+        setSelectedParent(parent);
+    };
+
+    // Link student to parent
+    const handleLinkStudentToParent = async () => {
+        if (!selectedStudentForLink || !selectedParent) {
+            setSnackbar({
+                open: true,
+                message: 'Please select a parent first',
+                severity: 'error'
+            });
+            return;
+        }
+
+        setLinkingInProgress(true);
+        try {
+            const response = await axios.put(
+                `${process.env.REACT_APP_BASE_URL}/Parent/Link/${selectedParent._id}/${selectedStudentForLink.id}`
+            );
+
+            if (response.data.message) {
+                setSnackbar({
+                    open: true,
+                    message: response.data.message,
+                    severity: 'warning'
+                });
+            } else {
+                setSnackbar({
+                    open: true,
+                    message: `Successfully linked ${selectedStudentForLink.name} to parent`,
+                    severity: 'success'
+                });
+
+                // Refresh student list
+                if (selectedClass) {
+                    dispatch(getClassStudents(selectedClass._id));
+                }
+            }
+        } catch (error) {
+            console.error("Error linking student to parent:", error);
+            setSnackbar({
+                open: true,
+                message: error.response?.data?.message || 'Failed to link student to parent',
+                severity: 'error'
+            });
+        } finally {
+            setLinkingInProgress(false);
+            setLinkParentOpen(false);
+            setSelectedStudentForLink(null);
+            setSelectedParent(null);
+        }
+    };
+
+    // Close snackbar
+    const handleCloseSnackbar = () => {
+        setSnackbar({ ...snackbar, open: false });
     };
 
     // Render classes as cards
@@ -384,6 +489,60 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
             {viewMode === 'classes' && renderClassesView()}
             {viewMode === 'students' && renderStudentsView()}
             <Popup setShowPopup={setShowPopup} showPopup={showPopup} />
+
+            {/* Parent Chooser Dialog for Linking */}
+            <Dialog open={linkParentOpen} onClose={() => setLinkParentOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
+                    Link Parent to Student
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    {selectedStudentForLink && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            Linking parent for student: <strong>{selectedStudentForLink.name}</strong> (Roll No: {selectedStudentForLink.rollNum})
+                        </Alert>
+                    )}
+                    <ParentChooser
+                        open={linkParentOpen}
+                        onClose={() => setLinkParentOpen(false)}
+                        onSelect={handleParentSelect}
+                        onCreateNew={() => {
+                            navigate("/Admin/addparent");
+                            setLinkParentOpen(false);
+                        }}
+                        schoolId={currentUser._id}
+                        title="Select Parent / Guardian"
+                        buttonText="Select Parent"
+                        selectedParent={selectedParent}
+                        showCreateNew={true}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={() => setLinkParentOpen(false)} color="inherit">
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleLinkStudentToParent}
+                        disabled={!selectedParent || linkingInProgress}
+                        startIcon={linkingInProgress ? <CircularProgress size={20} color="inherit" /> : <LinkIcon />}
+                    >
+                        {linkingInProgress ? 'Linking...' : 'Link Parent'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Snackbar for notifications */}
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

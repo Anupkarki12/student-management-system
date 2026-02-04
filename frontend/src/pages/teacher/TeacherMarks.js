@@ -1,19 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import {
     Box, Typography, Paper, Grid, Container, Button,
     Table, TableBody, TableCell, TableContainer, TableHead,
-    TableRow, Chip, TextField, Alert, IconButton,
+    TableRow, Chip, TextField, Alert,
     FormControl, InputLabel, Select, MenuItem, LinearProgress
 } from '@mui/material';
 import GradeIcon from '@mui/icons-material/Grade';
 import SaveIcon from '@mui/icons-material/Save';
 import axios from 'axios';
-import { formatNepaliDate } from '../../utils/nepaliDate';
 import NepaliDatePicker from '../../components/NepaliDatePicker';
 
 const TeacherMarks = () => {
-    const dispatch = useDispatch();
     const { currentUser } = useSelector((state) => state.user);
 
     const [classes, setClasses] = useState([]);
@@ -215,22 +213,8 @@ const TeacherMarks = () => {
         setSaving(false);
     };
 
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        if (date.toString() === 'Invalid Date') return 'N/A';
-        return formatNepaliDate(date, { format: 'full', showDayName: false });
-    };
-
     const hasExistingMark = (studentId) => {
         return existingMarks[studentId] !== undefined;
-    };
-
-    const getGradeColor = (percentage) => {
-        if (percentage >= 90) return 'success';
-        if (percentage >= 80) return 'primary';
-        if (percentage >= 70) return 'info';
-        if (percentage >= 60) return 'warning';
-        return 'error';
     };
 
     return (

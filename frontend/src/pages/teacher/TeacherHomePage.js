@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Container, Grid, Paper, Typography, Box, Card, CardContent, CircularProgress, Button } from '@mui/material';
 import SeeNotice from '../../components/SeeNotice';
 import CountUp from 'react-countup';
@@ -55,9 +55,9 @@ const TeacherHomePage = () => {
         if (teacherId) {
             fetchTeacherClasses();
         }
-    }, [teacherId]);
+    }, [teacherId, fetchTeacherClasses]);
 
-    const fetchTeacherClasses = async () => {
+    const fetchTeacherClasses = useCallback(async () => {
         setLoading(true);
         try {
             const apiUrl = process.env.REACT_APP_BASE_URL || 'http://localhost:5000';
@@ -73,7 +73,7 @@ const TeacherHomePage = () => {
             setError('Failed to load assigned classes: ' + (err.response?.data?.message || err.message));
         }
         setLoading(false);
-    };
+    }, [teacherId]);
 
     const handleRefresh = () => {
         fetchTeacherClasses();
