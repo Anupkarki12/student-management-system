@@ -1,0 +1,342 @@
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+    Box, Typography, Paper, Grid, Container, Button,
+    Table, TableBody, TableCell, TableContainer, TableHead,
+    TableRow, Chip, Card, CardContent, Breadcrumbs, Link,
+    Avatar, LinearProgress
+} from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import PersonIcon from '@mui/icons-material/Person';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+import LeaveApprovalIcon from '@mui/icons-material/EventBusy';
+import axios from 'axios';
+import { getAllSimpleStaffs } from '../../../redux/staffRelated/staffHandle';
+
+const StaffAttendance = () => {
+    const dispatch = useDispatch();
+
+    const { currentUser } = useSelector((state) => state.user);
+    const { staffList, loading } = useSelector((state) => state.staff);
+
+    const [staff, setStaff] = useState([]);
+    const [attendanceData, setAttendanceData] = useState({});
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [message, setMessage] = useState({ type: '', text: '' });
+    const [saving, setSaving] = useState(false);
+
+    const schoolId = currentUser?._id;
+
+    // Fetch staff on component mount
+    useEffect(() => {
+        if (schoolId) {
+            dispatch(getAllSimpleStaffs(schoolId));
+        }
+    }, [schoolId, dispatch]);
+
+    // Update staff when Redux state changes
+    useEffect(() => {
+        if (staffList && Array.isArray(staffList)) {
+            setStaff(staffList);
+        }
+    }, [staffList]);
+
+    // Fetch attendance when date changes
+    useEffect(() => {
+        if (staff.length > 0 && selectedDate) {
+            fetchAttendanceForDate();
+        }
+    }, [selectedDate, staff]);
+
+    const fetchAttendanceForDate = async () => {
+        setMessage({ type: '', text: '' });
+        try {
+            const attendanceMap = {};
+
+            // Fetch attendance for each staff
+            for (const staffMember of staff) {
+                try {
+                    const result = await axios.get(`${process.env.REACT_APP_BASE_URL}/SimpleStaff/${staffMember._id}`);
+                    if (result.data && result.data.attendance) {
+                        // Find attendance for the selected date
+                        const attendanceRecord = result.data.attendance.find(a => {
+                            const attendanceDate = new Date(a.date).toISOString().split('T')[0];
+                            return attendanceDate === selectedDate;
+                        });
+
+                        if (attendanceRecord) {
+                            attendanceMap[staffMember._id] = {
+                                status: attendanceRecord.status || 'Not Marked',
+                                inTime: attendanceRecord.inTime || '',
+                                outTime: attendanceRecord.outTime || ''
+                            };
+                        }
+                    }
+                } catch (err) {
+                    console.error(`Error fetching attendance for staff ${staffMember._id}:`, err);
+                }
+            }
+
+            setAttendanceData(attendanceMap);
+        } catch (error) {
+            console.error('Error fetching attendance:', error);
+            setMessage({ type: 'error', text: 'Error loading attendance data' });
+        }
+    };
+
+    const handleAttendanceChange = async (staffId, status) => {
+        try {
+            setSaving(true);
+            setMessage({ type: '', text: '' });
+
+            // Update attendance in backend
+            await axios.post(`${process.env.REACT_APP_BASE_URL}/StaffAttendance/${staffId}`, {
+                status,
+                date: selectedDate
+            });
+
+            // Update local state
+            setAttendanceData(prev => ({
+                ...prev,
+                [staffId]: {
+                    status,
+                    inTime: '',
+                    outTime: ''
+                }
+            }));
+
+            setMessage({ type: 'success', text: 'Attendance saved successfully!' });
+        } catch (error) {
+            console.error('Error saving attendance:', error);
+            setMessage({ type: 'error', text: 'Error saving attendance: ' + (error.response?.data?.message || error.message) });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const getStatusColor = (status) => {
+        return status === 'Present' ? 'success' : 
+               status === 'Absent' ? 'error' : 
+               status === 'Leave' ? 'warning' : 'default';
+    };
+
+    const getStatusIcon = (status) => {
+        return status === 'Present' ? <CheckCircleIcon color="success" /> : 
+               status === 'Absent' ? <CancelIcon color="error" /> :
+               status === 'Leave' ? <LeaveApprovalIcon color="warning" /> : null;
+    };
+
+    const getPositionLabel = (position) => {
+        return position || 'Staff';
+    };
+
+    return (
+        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+            <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+                <Box>
+                    <Typography variant="h5" component="h1" gutterBottom sx={{ mb: 3 }}>
+                        Staff Attendance
+                    </Typography>
+
+                    {/* Date Filter */}
+                    <Paper sx={{ p: 3, mb: 3 }}>
+                        <Grid container spacing={2} alignItems="center">
+                            <Grid item xs={12} sm={6} md={4}>
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #ccc',
+                                        fontSize: '16px',
+                                        cursor: 'pointer'
+                                    }}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6} md={4}>
+                                <Button 
+                                    variant="contained" 
+                                    onClick={fetchAttendanceForDate}
+                                    startIcon={<ArrowBackIcon />}
+                                >
+                                    Refresh Data
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </Paper>
+
+                    {/* Message */}
+                    {message.text && (
+                        <Paper sx={{ p: 2, mb: 3, bgcolor: message.type === 'error' ? '#ffebee' : message.type === 'success' ? '#e8f5e9' : '#e3f2fd' }}>
+                            <Typography color={message.type === 'error' ? 'error' : message.type === 'success' ? 'success' : 'info'}>
+                                {message.text}
+                            </Typography>
+                        </Paper>
+                    )}
+
+                    {/* Loading */}
+                    {loading && <LinearProgress sx={{ mb: 2 }} />}
+
+                    {/* Staff Count Summary */}
+                    <Paper sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5' }}>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={3}>
+                                <Typography variant="subtitle1">
+                                    <strong>Total Staff:</strong> {staff.length}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={3}>
+                                <Typography variant="subtitle1" color="success.main">
+                                    <strong>Present:</strong> {Object.values(attendanceData).filter(a => a.status === 'Present').length}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={3}>
+                                <Typography variant="subtitle1" color="error.main">
+                                    <strong>Absent:</strong> {Object.values(attendanceData).filter(a => a.status === 'Absent').length}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={3}>
+                                <Typography variant="subtitle1" color="warning.main">
+                                    <strong>On Leave:</strong> {Object.values(attendanceData).filter(a => a.status === 'Leave').length}
+                                </Typography>
+                            </Grid>
+                        </Grid>
+                    </Paper>
+
+                    {/* Staff Table */}
+                    <TableContainer component={Paper}>
+                        <Table>
+                            <TableHead>
+                                <TableRow sx={{ bgcolor: '#7f56da' }}>
+                                    <TableCell sx={{ fontWeight: 'bold', color: 'white', width: '5%' }}>#</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', color: 'white', width: '30%' }}>Staff Name</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', color: 'white', width: '20%' }}>Position</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', color: 'white', width: '15%' }}>Department</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', color: 'white', width: '15%' }}>Status</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold', color: 'white', width: '15%' }}>Actions</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                                            <Typography>Loading staff...</Typography>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : staff.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                                            <Typography color="textSecondary">
+                                                No staff found. Please add staff first.
+                                            </Typography>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    staff.map((staffMember, index) => {
+                                        const attendance = attendanceData[staffMember._id];
+                                        const status = attendance?.status || 'Not Marked';
+                                        
+                                        return (
+                                            <TableRow key={staffMember._id} hover>
+                                                <TableCell>
+                                                    <Typography variant="body2">
+                                                        {index + 1}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                        <Avatar sx={{ bgcolor: '#7f56da', width: 40, height: 40 }}>
+                                                            {staffMember.name?.charAt(0)}
+                                                        </Avatar>
+                                                        <Box>
+                                                            <Typography variant="body1" fontWeight="medium">
+                                                                {staffMember.name}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="textSecondary">
+                                                                {staffMember.email}
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip 
+                                                        label={getPositionLabel(staffMember.position)}
+                                                        size="small"
+                                                        sx={{ bgcolor: '#e3f2fd' }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2">
+                                                        {staffMember.department || 'General'}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip 
+                                                        icon={getStatusIcon(status)}
+                                                        label={status}
+                                                        color={getStatusColor(status)}
+                                                        variant={status === 'Not Marked' ? 'outlined' : 'filled'}
+                                                        size="medium"
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                                        <Button
+                                                            size="small"
+                                                            variant={status === 'Present' ? 'contained' : 'outlined'}
+                                                            color="success"
+                                                            startIcon={<CheckCircleIcon />}
+                                                            onClick={() => handleAttendanceChange(staffMember._id, 'Present')}
+                                                            disabled={saving}
+                                                        >
+                                                            Present
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant={status === 'Absent' ? 'contained' : 'outlined'}
+                                                            color="error"
+                                                            startIcon={<CancelIcon />}
+                                                            onClick={() => handleAttendanceChange(staffMember._id, 'Absent')}
+                                                            disabled={saving}
+                                                        >
+                                                            Absent
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant={status === 'Leave' ? 'contained' : 'outlined'}
+                                                            color="warning"
+                                                            startIcon={<LeaveApprovalIcon />}
+                                                            onClick={() => handleAttendanceChange(staffMember._id, 'Leave')}
+                                                            disabled={saving}
+                                                        >
+                                                            Leave
+                                                        </Button>
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+
+                    {/* Saving Indicator */}
+                    {saving && (
+                        <Box sx={{ mt: 2, textAlign: 'center' }}>
+                            <Typography color="textSecondary">Saving attendance...</Typography>
+                            <LinearProgress />
+                        </Box>
+                    )}
+                </Box>
+            </Paper>
+        </Container>
+    );
+};
+
+export default StaffAttendance;
+

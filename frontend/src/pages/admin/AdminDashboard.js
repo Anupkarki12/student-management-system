@@ -61,6 +61,7 @@ import AddStaff from './staffRelated/AddStaff';
 import ShowStaff from './staffRelated/ShowStaff';
 import StaffDetails from './staffRelated/StaffDetails';
 import TeacherAttendance from './teacherRelated/TeacherAttendance';
+import StaffAttendance from './staffRelated/StaffAttendance';
 
 // Parent imports
 import AddParent from './parentRelated/AddParent';
@@ -183,6 +184,7 @@ const AdminDashboard = () => {
                     {/* Attendance */}
                     <Route path="/Admin/attendance" element={<ClassAttendance />} />
                     <Route path="/Admin/teacher-attendance" element={<TeacherAttendance />} />
+                    <Route path="/Admin/staff-attendance" element={<StaffAttendance />} />
 
                     {/* Salary */}
                     <Route path="/Admin/salary" element={<ShowSalary />} />

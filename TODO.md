@@ -1,51 +1,31 @@
-# TODO: Fix Teacher Details Not Showing on Class Details Page
-
-## Plan Overview
-Add functionality to fetch and display teacher details on the class details page.
+# Staff Attendance Implementation Plan
 
 ## Tasks
 
-### Backend Changes
-- [x] 1. Add `getSclassTeachers` endpoint to `backend/controllers/class-controller.js`
-- [x] 2. Update `backend/routes/route.js` with new route `/Sclass/Teachers/:id`
+### 1. Create StaffAttendance Component
+- [x] Create `frontend/src/pages/admin/staffRelated/StaffAttendance.js`
+- [x] Component similar to TeacherAttendance.js
+- [x] Features:
+  - Date picker for selecting attendance date
+  - List of all staff members
+  - Present/Absent/Leave buttons for each staff
+  - Real-time attendance saving via API
+  - Summary showing Present/Absent/Leave counts
 
-### Frontend Changes
-- [x] 3. Update `frontend/src/redux/sclassRelated/sclassSlice.js` with new state and actions
-- [x] 4. Update `frontend/src/redux/sclassRelated/sclassHandle.js` with new async thunk
-- [x] 5. Update `frontend/src/pages/admin/classRelated/ClassDetails.js` to fetch and display teachers
+### 2. Update SideBar
+- [x] Add "Staff Attendance" menu item in sidebar
+- [x] Add icon (CheckCircleIcon similar to other attendance links)
+- [x] Route: `/Admin/staff-attendance`
 
-## Implementation Details
+### 3. Update AdminDashboard Routes
+- [x] Import StaffAttendance component
+- [x] Add route: `/Admin/staff-attendance`
 
-### 1. Backend: class-controller.js
-Added new function `getSclassTeachers` to fetch teachers for a class using TeacherClassAssignment model
+## API Endpoints (Already exist)
+- `POST /StaffAttendance/:id` - Save staff attendance
+- `GET /SimpleStaff/:id` - Get staff details with attendance
 
-### 2. Backend: route.js
-Added route: GET `/Sclass/Teachers/:id`
+## Implementation Status
+✅ All tasks completed!
 
-### 3. Frontend: sclassSlice.js
-Added:
-- `sclassTeachers` to initial state
-- `getTeachersSuccess` action
-- `getTeachersFailed` action
-
-### 4. Frontend: sclassHandle.js
-Added:
-- `getClassTeachers` async thunk
-
-### 5. Frontend: ClassDetails.js
-- Imported `getClassTeachers` action
-- Dispatched action in useEffect
-- Updated `ClassTeachersSection` component with table template displaying:
-  - Teacher Name
-  - Teacher Email
-  - Subject Name
-- Added "Assign Teacher" button and SpeedDialTemplate actions
-
-## Testing Instructions
-1. Restart the backend server
-2. Restart the frontend development server
-3. Navigate to a class details page (e.g., `/Admin/classes/class/6980435832f8ab1eeeeec53e`)
-4. Click on the "Teachers" tab
-5. Verify that teachers assigned to the class are displayed in a table format
-6. Verify that the "Assign Teacher" button is available to assign new teachers
 
