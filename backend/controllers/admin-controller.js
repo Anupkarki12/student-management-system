@@ -57,8 +57,12 @@ const Complain = require('../models/complainSchema.js');
 
 const adminRegister = async (req, res) => {
     try {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPass = await bcrypt.hash(req.body.password, salt);
+
         const admin = new Admin({
-            ...req.body
+            ...req.body,
+            password: hashedPass
         });
 
         const existingAdminByEmail = await Admin.findOne({ email: req.body.email });

@@ -82,7 +82,12 @@ export const registerUser = (fields, role) => async (dispatch) => {
         const result = await axios.post(`${process.env.REACT_APP_BASE_URL}/${role}Reg`, fields, {
             headers: { 'Content-Type': 'application/json' },
         });
-        if (result.data.schoolName) {
+        
+        // For Admin registration, do NOT auto-login - just show success message
+        if (role === "Admin") {
+            dispatch(stuffAdded());
+        }
+        else if (result.data.schoolName) {
             dispatch(authSuccess(result.data));
         }
         else if (result.data.school) {
