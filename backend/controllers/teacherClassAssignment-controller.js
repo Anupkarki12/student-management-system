@@ -75,7 +75,9 @@ const getAvailableTeachersForClass = async (req, res) => {
             .populate('teacher', 'name email')
             .populate('subject', 'subName subCode')
             .populate('sclass', 'sclassName');
-        const assignedTeacherIds = assignedAssignments.map(a => a.teacher._id.toString());
+        const assignedTeacherIds = assignedAssignments
+            .filter(a => a.teacher !== null)
+            .map(a => a.teacher._id.toString());
 
         const availableTeachers = allTeachers.filter(
             teacher => !assignedTeacherIds.includes(teacher._id.toString())

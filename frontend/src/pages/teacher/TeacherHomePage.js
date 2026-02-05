@@ -51,12 +51,6 @@ const TeacherHomePage = () => {
 
     const teacherId = currentUser?._id;
 
-    useEffect(() => {
-        if (teacherId) {
-            fetchTeacherClasses();
-        }
-    }, [teacherId, fetchTeacherClasses]);
-
     const fetchTeacherClasses = useCallback(async () => {
         setLoading(true);
         try {
@@ -74,6 +68,12 @@ const TeacherHomePage = () => {
         }
         setLoading(false);
     }, [teacherId]);
+
+    useEffect(() => {
+        if (teacherId) {
+            fetchTeacherClasses();
+        }
+    }, [teacherId, fetchTeacherClasses]);
 
     const handleRefresh = () => {
         fetchTeacherClasses();
