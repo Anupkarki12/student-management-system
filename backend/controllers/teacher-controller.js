@@ -203,7 +203,7 @@ const deleteTeachersByClass = async (req, res) => {
 };
 
 const teacherAttendance = async (req, res) => {
-    const { status, date } = req.body;
+    const { status, date, presentCount, absentCount } = req.body;
 
     try {
         const teacher = await Teacher.findById(req.params.id);
@@ -212,6 +212,10 @@ const teacherAttendance = async (req, res) => {
             return res.send({ message: 'Teacher not found' });
         }
 
+        // Calculate presentCount and absentCount based on status
+        const present = status === 'Present' ? 1 : 0;
+        const absent = status === 'Absent' ? 1 : 0;
+
         const existingAttendance = teacher.attendance.find(
             (a) =>
                 a.date.toDateString() === new Date(date).toDateString()
@@ -219,8 +223,15 @@ const teacherAttendance = async (req, res) => {
 
         if (existingAttendance) {
             existingAttendance.status = status;
+            existingAttendance.presentCount = present;
+            existingAttendance.absentCount = absent;
         } else {
-            teacher.attendance.push({ date, status });
+            teacher.attendance.push({ 
+                date, 
+                status, 
+                presentCount: present,
+                absentCount: absent
+            });
         }
 
         const result = await teacher.save();
@@ -275,6 +286,84 @@ const getTeacherAttendanceReport = async (req, res) => {
     }
 };
 
+// Export all teachers' attendance for a school
+const exportTeachersAttendance = async (req, res) => {
+    try {
+        const { schoolId } = req.params;
+        const { month, year } = req.query;
+
+        // Convert to ObjectId if valid
+        const schoolObjectId = mongoose.Types.ObjectId.isValid(schoolId)
+            ? new mongoose.Types.ObjectId(schoolId)
+            : schoolId;
+
+        // Get all teachers for the school
+        const teachers = await Teacher.find({ school: schoolObjectId })
+            .populate("teachSubject", "subName")
+            .populate("teachSclass", "sclassName");
+
+        if (!teachers || teachers.length === 0) {
+            return res.send({ message: 'No teachers found', data: [] });
+        }
+
+        // Build export data
+        const exportData = [];
+
+        for (const teacher of teachers) {
+            let attendance = teacher.attendance || [];
+
+            // Filter by month and year if provided
+            if (month || year) {
+                attendance = attendance.filter(a => {
+                    const attDate = new Date(a.date);
+                    const monthMatch = month ? attDate.getMonth() + 1 === parseInt(month) : true;
+                    const yearMatch = year ? attDate.getFullYear() === parseInt(year) : true;
+                    return monthMatch && yearMatch;
+                });
+            }
+
+            // If no specific month/year, limit to last 30 days for performance
+            if (!month && !year && attendance.length > 30) {
+                attendance = attendance.slice(-30);
+            }
+
+            for (const att of attendance) {
+                // Calculate present/absent counts based on status if not stored
+                const presentCount = att.presentCount || (att.status === 'Present' ? '1' : '0');
+                const absentCount = att.absentCount || (att.status === 'Absent' ? '1' : '0');
+                
+                exportData.push({
+                    'Teacher Name': teacher.name,
+                    'Email': teacher.email,
+                    'Subject': teacher.teachSubject?.subName || 'N/A',
+                    'Class': teacher.teachSclass?.sclassName || 'N/A',
+                    'Date': new Date(att.date).toLocaleDateString('en-GB'),
+                    'Status': att.status,
+                    'Present Count': presentCount,
+                    'Absent Count': absentCount
+                });
+            }
+        }
+
+        // Calculate summary
+        const present = exportData.filter(d => d.Status === 'Present').length;
+        const absent = exportData.filter(d => d.Status === 'Absent').length;
+        const leave = exportData.filter(d => d.Status === 'Leave').length;
+
+        res.send({
+            data: exportData,
+            summary: {
+                totalRecords: exportData.length,
+                present,
+                absent,
+                leave
+            }
+        });
+    } catch (error) {
+        res.status(500).json(error);
+    }
+};
+
 module.exports = {
     teacherRegister,
     teacherLogIn,
@@ -286,5 +375,6 @@ module.exports = {
     deleteTeachers,
     deleteTeachersByClass,
     teacherAttendance,
-    getTeacherAttendanceReport
+    getTeacherAttendanceReport,
+    exportTeachersAttendance
 };

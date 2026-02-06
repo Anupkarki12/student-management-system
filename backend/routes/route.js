@@ -21,7 +21,7 @@ const {
     removeStudentAttendanceBySubject, removeStudentAttendance
 } = require('../controllers/student_controller.js');
 const { subjectCreate, classSubjects, deleteSubjectsByClass, getSubjectDetail, deleteSubject, freeSubjectList, allSubjects, deleteSubjects } = require('../controllers/subject-controller.js');
-const { teacherRegister, teacherLogIn, teacherForgotPassword, getTeachers, getTeacherDetail, deleteTeachers, deleteTeachersByClass, deleteTeacher, updateTeacherSubject, teacherAttendance, getTeacherAttendanceReport } = require('../controllers/teacher-controller.js');
+const { teacherRegister, teacherLogIn, teacherForgotPassword, getTeachers, getTeacherDetail, deleteTeachers, deleteTeachersByClass, deleteTeacher, updateTeacherSubject, teacherAttendance, getTeacherAttendanceReport, exportTeachersAttendance } = require('../controllers/teacher-controller.js');
 const { createFee, getStudentFees, getAllStudentFees, updateFee, deleteFee } = require('../controllers/fee-controller.js');
 const { documentCreate, documentList, getTeacherDocuments, getSchoolDocuments, getStudentDocuments, deleteDocument, deleteDocuments } = require('../controllers/document-controller.js');
 const { createHomework, getHomework, getHomeworkByClass, getHomeworkForClass, getHomeworkForStudent, deleteHomework } = require('../controllers/homework-controller.js');
@@ -68,6 +68,7 @@ router.delete("/Teacher/:id", deleteTeacher)
 router.put("/TeacherSubject", updateTeacherSubject)
 router.post('/TeacherAttendance/:id', teacherAttendance)
 router.get('/Teacher/Attendance/:id', getTeacherAttendanceReport)
+router.get('/Teachers/AttendanceExport/:schoolId', exportTeachersAttendance)
 
 // Notice
 router.post('/NoticeCreate', noticeCreate);
@@ -514,6 +515,7 @@ router.put('/Staff/Salary/:id', staffController.updateSalary);
 router.get('/Staff/Salary/Calculate/:id', staffController.calculateNetSalary);
 router.get('/Staff/Salary/Summary/:schoolId', staffController.getStaffSalarySummary);
 router.put('/Staff/ClearAttendance/:id', staffController.clearStaffAttendance);
+router.get('/Staffs/AttendanceExport/:schoolId', staffController.exportStaffAttendance);
 
 // Simple Staff Routes (without login/authentication)
 const simpleStaffController = require('../controllers/simple-staff-controller.js');

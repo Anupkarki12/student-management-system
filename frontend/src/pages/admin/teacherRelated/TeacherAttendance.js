@@ -5,14 +5,16 @@ import {
     Box, Typography, Paper, Grid, Container, Button,
     Table, TableBody, TableCell, TableContainer, TableHead,
     TableRow, Chip, Card, CardContent, Breadcrumbs, Link,
-    Avatar, LinearProgress
+    Avatar, LinearProgress, MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PersonIcon from '@mui/icons-material/Person';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import axios from 'axios';
 import { getAllTeachers } from '../../../redux/teacherRelated/teacherHandle';
+import { exportToExcel, getCurrentDateString, monthsList } from '../../../utils/excelExport';
 
 const TeacherAttendance = () => {
     const dispatch = useDispatch();
@@ -27,7 +29,15 @@ const TeacherAttendance = () => {
     const [message, setMessage] = useState({ type: '', text: '' });
     const [saving, setSaving] = useState(false);
 
+    // Filter states
+    const [selectedMonth, setSelectedMonth] = useState('');
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [exporting, setExporting] = useState(false);
+
     const schoolId = currentUser?._id;
+
+    // Generate years for dropdown
+    const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
     // Fetch teachers on component mount
     useEffect(() => {
@@ -86,15 +96,21 @@ const TeacherAttendance = () => {
         }
     };
 
-    const handleAttendanceChange = async (teacherId, status) => {
+const handleAttendanceChange = async (teacherId, status) => {
         try {
             setSaving(true);
             setMessage({ type: '', text: '' });
 
+            // Calculate present and absent counts
+            const presentCount = status === 'Present' ? 1 : 0;
+            const absentCount = status === 'Absent' ? 1 : 0;
+
             // Update attendance in backend
             await axios.post(`${process.env.REACT_APP_BASE_URL}/TeacherAttendance/${teacherId}`, {
                 status,
-                date: selectedDate
+                date: selectedDate,
+                presentCount,
+                absentCount
             });
 
             // Update local state
@@ -102,8 +118,8 @@ const TeacherAttendance = () => {
                 ...prev,
                 [teacherId]: {
                     status,
-                    presentCount: status === 'Present' ? '1' : '0',
-                    absentCount: status === 'Absent' ? '1' : '0'
+                    presentCount: presentCount.toString(),
+                    absentCount: absentCount.toString()
                 }
             }));
 
@@ -125,6 +141,44 @@ const TeacherAttendance = () => {
                status === 'Absent' ? <CancelIcon color="error" /> : null;
     };
 
+    // Export to Excel
+    const handleExport = async () => {
+        try {
+            setExporting(true);
+            setMessage({ type: '', text: '' });
+
+            // Build query params
+            let url = `${process.env.REACT_APP_BASE_URL}/Teachers/AttendanceExport/${schoolId}`;
+            const queryParams = [];
+            
+            if (selectedMonth) {
+                queryParams.push(`month=${monthsList.indexOf(selectedMonth) + 1}`);
+            }
+            if (selectedYear) {
+                queryParams.push(`year=${selectedYear}`);
+            }
+            
+            if (queryParams.length > 0) {
+                url += '?' + queryParams.join('&');
+            }
+
+            const response = await axios.get(url);
+            
+            if (response.data && response.data.data && response.data.data.length > 0) {
+                const fileName = `Teacher_Attendance_${selectedMonth || 'All'}_${selectedYear}_${getCurrentDateString()}`;
+                exportToExcel(response.data.data, fileName, 'Teacher Attendance');
+                setMessage({ type: 'success', text: 'Export successful!' });
+            } else {
+                setMessage({ type: 'info', text: 'No attendance data found for the selected period.' });
+            }
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            setMessage({ type: 'error', text: 'Error exporting data: ' + (error.response?.data?.message || error.message) });
+        } finally {
+            setExporting(false);
+        }
+    };
+
     // Render Teachers View
     const renderTeachersView = () => (
         <Box>
@@ -135,7 +189,7 @@ const TeacherAttendance = () => {
             {/* Date Filter */}
             <Paper sx={{ p: 3, mb: 3 }}>
                 <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} sm={6} md={4}>
+                    <Grid item xs={12} sm={6} md={3}>
                         <input
                             type="date"
                             value={selectedDate}
@@ -150,13 +204,62 @@ const TeacherAttendance = () => {
                             }}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
+                    <Grid item xs={12} sm={6} md={3}>
                         <Button 
                             variant="contained" 
                             onClick={fetchAttendanceForDate}
                             startIcon={<ArrowBackIcon />}
                         >
                             Refresh Data
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Paper>
+
+            {/* Export Section */}
+            <Paper sx={{ p: 3, mb: 3, bgcolor: '#e3f2fd' }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+                    Export Attendance Data
+                </Typography>
+                <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} sm={4} md={3}>
+                        <FormControl fullWidth size="small">
+                            <InputLabel>Month</InputLabel>
+                            <Select
+                                value={selectedMonth}
+                                label="Month"
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                            >
+                                <MenuItem value="">All Months</MenuItem>
+                                {monthsList.map((month) => (
+                                    <MenuItem key={month} value={month}>{month}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={4} md={2}>
+                        <FormControl fullWidth size="small">
+                            <InputLabel>Year</InputLabel>
+                            <Select
+                                value={selectedYear}
+                                label="Year"
+                                onChange={(e) => setSelectedYear(e.target.value)}
+                            >
+                                {years.map((year) => (
+                                    <MenuItem key={year} value={year}>{year}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={4} md={3}>
+                        <Button
+                            variant="contained"
+                            color="success"
+                            onClick={handleExport}
+                            disabled={exporting}
+                            startIcon={<FileDownloadIcon />}
+                        >
+                            {exporting ? 'Exporting...' : 'Export to Excel'}
                         </Button>
                     </Grid>
                 </Grid>

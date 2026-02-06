@@ -234,6 +234,78 @@ const staffController = {
         }
     },
 
+    // Export all staff's attendance for a school
+    exportStaffAttendance: async (req, res) => {
+        try {
+            const { schoolId } = req.params;
+            const { month, year } = req.query;
+
+            // Convert to ObjectId if valid
+            const schoolObjectId = mongoose.Types.ObjectId.isValid(schoolId)
+                ? new mongoose.Types.ObjectId(schoolId)
+                : schoolId;
+
+            // Get all staff for the school
+            const staff = await Staff.find({ school: schoolObjectId });
+
+            if (!staff || staff.length === 0) {
+                return res.send({ message: 'No staff found', data: [] });
+            }
+
+            // Build export data
+            const exportData = [];
+
+            for (const staffMember of staff) {
+                let attendance = staffMember.attendance || [];
+
+                // Filter by month and year if provided
+                if (month || year) {
+                    attendance = attendance.filter(a => {
+                        const attDate = new Date(a.date);
+                        const monthMatch = month ? attDate.getMonth() + 1 === parseInt(month) : true;
+                        const yearMatch = year ? attDate.getFullYear() === parseInt(year) : true;
+                        return monthMatch && yearMatch;
+                    });
+                }
+
+                // If no specific month/year, limit to last 30 days for performance
+                if (!month && !year && attendance.length > 30) {
+                    attendance = attendance.slice(-30);
+                }
+
+                for (const att of attendance) {
+                    exportData.push({
+                        'Staff Name': staffMember.name,
+                        'Email': staffMember.email,
+                        'Position': staffMember.position || 'N/A',
+                        'Department': staffMember.department || 'General',
+                        'Date': new Date(att.date).toLocaleDateString('en-GB'),
+                        'Status': att.status,
+                        'In Time': att.inTime || '-',
+                        'Out Time': att.outTime || '-'
+                    });
+                }
+            }
+
+            // Calculate summary
+            const present = exportData.filter(d => d.Status === 'Present').length;
+            const absent = exportData.filter(d => d.Status === 'Absent').length;
+            const leave = exportData.filter(d => d.Status === 'Leave').length;
+
+            res.send({
+                data: exportData,
+                summary: {
+                    totalRecords: exportData.length,
+                    present,
+                    absent,
+                    leave
+                }
+            });
+        } catch (error) {
+            res.status(500).json(error);
+        }
+    },
+
     // Update salary
     updateSalary: async (req, res) => {
         try {
