@@ -83,6 +83,48 @@ const studentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'parent',
         default: null
+    },
+    // Archived results for historical reference
+    archivedResults: [{
+        academicInfo: {
+            year: String,
+            examType: String
+        },
+        marks: [{
+            subject: String,
+            examType: String,
+            examDate: Date,
+            marksObtained: Number,
+            maxMarks: Number,
+            grade: String,
+            percentage: String
+        }],
+        summary: {
+            totalExams: Number,
+            totalMarks: {
+                obtained: Number,
+                max: Number
+            },
+            overallPercentage: String,
+            overallGrade: String
+        },
+        archivedBy: {
+            type: String,
+            default: 'system'
+        },
+        description: String,
+        archivedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    totalDays: {
+        type: Number,
+        default: 0
+    },
+    presentDays: {
+        type: Number,
+        default: 0
     }
 });
 

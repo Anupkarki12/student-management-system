@@ -26,7 +26,7 @@ const { createFee, getStudentFees, getAllStudentFees, updateFee, deleteFee } = r
 const { documentCreate, documentList, getTeacherDocuments, getSchoolDocuments, getStudentDocuments, deleteDocument, deleteDocuments } = require('../controllers/document-controller.js');
 const { createHomework, getHomework, getHomeworkByClass, getHomeworkForClass, getHomeworkForStudent, deleteHomework } = require('../controllers/homework-controller.js');
 const { createTeacherNote, getTeacherNotes, getSchoolNotes, getNotesByClass, deleteTeacherNote } = require('../controllers/teacherNote-controller.js');
-const { createMarks, getMarks, getStudentMarks, getClassMarks, deleteMarks, getAllMarksForSchool, bulkCreateMarks } = require('../controllers/marks-controller.js');
+const { createMarks, getMarks, getStudentMarks, getClassMarks, deleteMarks, getAllMarksForSchool, bulkCreateMarks, generateStudentReportCard, generateClassReportCards, archiveResults, getArchivedResults, restoreArchivedResults } = require('../controllers/marks-controller.js');
 const { assignTeacherToClass, getTeacherAssignments, getClassAssignments, getAvailableTeachersForClass, deleteAssignment, getTeacherClasses, getTeacherSubjectsByClass, getTeacherDetailsWithAssignments } = require('../controllers/teacherClassAssignment-controller.js');
 const { createRoutine, getRoutinesBySchool, getRoutineByClass, getRoutineById, deleteRoutine, getClassRoutine, getExamRoutine, createExamRoutine, getExamRoutinesBySchool, getTeacherExamRoutines, getStudentExamRoutines, deleteExamRoutine, fixExamRoutinePaths } = require('../controllers/routine-controller.js');
 const salaryController = require('../controllers/salary-controller.js');
@@ -275,6 +275,18 @@ router.get('/Marks/All/:schoolId', getAllMarksForSchool);
 
 // Bulk marks creation
 router.post('/Marks/BulkCreate', bulkCreateMarks);
+
+// Report Card Generation Routes
+// Generate single student report card
+router.get('/ReportCard/Student/:studentId', generateStudentReportCard);
+// Generate report cards for entire class
+router.get('/ReportCard/Class/:classId', generateClassReportCards);
+// Archive results for future reference
+router.post('/Results/Archive/:studentId', archiveResults);
+// Get archived results for a student
+router.get('/Results/Archive/:studentId', getArchivedResults);
+// Restore archived results
+router.post('/Results/Restore/:studentId/:archiveIndex', restoreArchivedResults);
 
 // Teacher Class Assignment Routes
 router.post('/Teacher/Assign', assignTeacherToClass);

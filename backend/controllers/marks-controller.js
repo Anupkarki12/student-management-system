@@ -3,6 +3,530 @@ const Student = require('../models/studentSchema.js');
 const Teacher = require('../models/teacherSchema.js');
 const Subject = require('../models/subjectSchema.js');
 const Sclass = require('../models/sclassSchema.js');
+const Admin = require('../models/adminSchema.js');
+
+// Report Card Generation Helper Functions
+
+// Calculate grade from percentage
+const calculateGrade = (percentage) => {
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'B+';
+    if (percentage >= 60) return 'B';
+    if (percentage >= 50) return 'C+';
+    if (percentage >= 40) return 'C';
+    return 'F';
+};
+
+// Get grade color for display
+const getGradeColor = (grade) => {
+    const colors = {
+        'A+': '#2e7d32',
+        'A': '#1976d2',
+        'B+': '#0288d1',
+        'B': '#00796b',
+        'C+': '#f57c00',
+        'C': '#ffa000',
+        'F': '#d32f2f'
+    };
+    return colors[grade] || '#757575';
+};
+
+// Generate comprehensive report card data for a single student
+const generateStudentReportCard = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { examType, year } = req.query;
+
+        // Get student details
+        const student = await Student.findById(studentId)
+            .populate('sclassName', 'sclassName');
+        
+        if (!student) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+
+        // Build query for marks
+        let marksQuery = { student: studentId };
+        
+        if (examType && examType !== 'all') {
+            marksQuery.examType = examType;
+        }
+        
+        if (year) {
+            const startDate = new Date(year, 0, 1);
+            const endDate = new Date(year, 11, 31);
+            marksQuery.examDate = { $gte: startDate, $lte: endDate };
+        }
+
+        // Get marks
+        const marks = await Marks.find(marksQuery)
+            .populate('subject', 'subName')
+            .populate('teacher', 'name')
+            .sort({ examDate: -1 });
+
+        // Get school details
+        const school = await Admin.findById(student.school);
+        const classDetails = await Sclass.findById(student.sclassName._id);
+
+        // Calculate statistics
+        const totalObtained = marks.reduce((sum, m) => sum + m.marksObtained, 0);
+        const totalMax = marks.reduce((sum, m) => sum + m.maxMarks, 0);
+        const overallPercentage = totalMax > 0 ? ((totalObtained / totalMax) * 100) : 0;
+        const overallGrade = calculateGrade(overallPercentage);
+
+        // Group marks by subject for subject-wise analysis
+        const subjectStats = {};
+        marks.forEach(mark => {
+            const subName = mark.subject?.subName || 'Unknown';
+            if (!subjectStats[subName]) {
+                subjectStats[subName] = {
+                    subject: subName,
+                    exams: [],
+                    totalObtained: 0,
+                    totalMax: 0,
+                    percentage: 0
+                };
+            }
+            subjectStats[subName].exams.push({
+                examType: mark.examType,
+                examDate: mark.examDate,
+                marksObtained: mark.marksObtained,
+                maxMarks: mark.maxMarks,
+                grade: mark.grade
+            });
+            subjectStats[subName].totalObtained += mark.marksObtained;
+            subjectStats[subName].totalMax += mark.maxMarks;
+        });
+
+        // Calculate subject-wise percentages
+        Object.values(subjectStats).forEach(stat => {
+            stat.percentage = stat.totalMax > 0 
+                ? ((stat.totalObtained / stat.totalMax) * 100) 
+                : 0;
+            stat.overallGrade = calculateGrade(stat.percentage);
+        });
+
+        // Grade distribution
+        const gradeDistribution = {};
+        marks.forEach(mark => {
+            const grade = mark.grade || 'N/A';
+            gradeDistribution[grade] = (gradeDistribution[grade] || 0) + 1;
+        });
+
+        // Exam type breakdown
+        const examTypeBreakdown = {};
+        marks.forEach(mark => {
+            if (!examTypeBreakdown[mark.examType]) {
+                examTypeBreakdown[mark.examType] = {
+                    examType: mark.examType,
+                    count: 0,
+                    totalObtained: 0,
+                    totalMax: 0
+                };
+            }
+            examTypeBreakdown[mark.examType].count++;
+            examTypeBreakdown[mark.examType].totalObtained += mark.marksObtained;
+            examTypeBreakdown[mark.examType].totalMax += mark.maxMarks;
+        });
+
+        const reportCard = {
+            student: {
+                id: student._id,
+                name: student.name,
+                rollNum: student.rollNum,
+                class: student.sclassName?.sclassName,
+                classId: student.sclassName?._id,
+                gender: student.gender,
+                address: student.address,
+                phone: student.phone
+            },
+            school: {
+                name: school?.schoolName || 'School Name',
+                email: school?.email || '',
+                phone: school?.phone || ''
+            },
+            academicInfo: {
+                year: year || new Date().getFullYear().toString(),
+                examType: examType || 'All Exams'
+            },
+            summary: {
+                totalExams: marks.length,
+                totalSubjects: Object.keys(subjectStats).length,
+                totalMarks: {
+                    obtained: totalObtained,
+                    max: totalMax
+                },
+                overallPercentage: overallPercentage.toFixed(2),
+                overallGrade: overallGrade,
+                gradeDistribution,
+                examTypeBreakdown: Object.values(examTypeBreakdown)
+            },
+            subjectResults: Object.values(subjectStats),
+            detailedMarks: marks,
+            attendanceStats: {
+                totalDays: student.totalDays || 0,
+                presentDays: student.presentDays || 0,
+                attendancePercentage: student.totalDays > 0 
+                    ? ((student.presentDays / student.totalDays) * 100).toFixed(2) 
+                    : 0
+            },
+            generatedAt: new Date(),
+            status: 'generated'
+        };
+
+        res.send(reportCard);
+    } catch (err) {
+        console.error('Error generating report card:', err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Generate report cards for all students in a class
+const generateClassReportCards = async (req, res) => {
+    try {
+        const { classId } = req.params;
+        const { examType, year } = req.query;
+
+        // Get class details
+        const classDetails = await Sclass.findById(classId);
+        if (!classDetails) {
+            return res.status(404).json({ message: "Class not found" });
+        }
+
+        // Get all students in the class
+        const students = await Student.find({ sclassName: classId });
+        if (students.length === 0) {
+            return res.status(404).json({ message: "No students found in this class" });
+        }
+
+        // Get school details from first student
+        const school = students.length > 0 ? await Admin.findById(students[0].school) : null;
+
+        // Generate report card for each student
+        const reportCards = [];
+        
+        for (const student of students) {
+            // Build query for marks
+            let marksQuery = { student: student._id };
+            
+            if (examType && examType !== 'all') {
+                marksQuery.examType = examType;
+            }
+            
+            if (year) {
+                const startDate = new Date(year, 0, 1);
+                const endDate = new Date(year, 11, 31);
+                marksQuery.examDate = { $gte: startDate, $lte: endDate };
+            }
+
+            // Get marks for this student
+            const marks = await Marks.find(marksQuery)
+                .populate('subject', 'subName')
+                .sort({ examDate: -1 });
+
+            // Calculate statistics
+            const totalObtained = marks.reduce((sum, m) => sum + m.marksObtained, 0);
+            const totalMax = marks.reduce((sum, m) => sum + m.maxMarks, 0);
+            const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100) : 0;
+            const grade = calculateGrade(percentage);
+            const passed = percentage >= 40;
+
+            // Group marks by subject
+            const subjectResults = {};
+            marks.forEach(mark => {
+                const subName = mark.subject?.subName || 'Unknown';
+                if (!subjectResults[subName]) {
+                    subjectResults[subName] = {
+                        subject: subName,
+                        totalObtained: 0,
+                        totalMax: 0,
+                        exams: 0,
+                        percentage: 0,
+                        grade: 'N/A'
+                    };
+                }
+                subjectResults[subName].totalObtained += mark.marksObtained;
+                subjectResults[subName].totalMax += mark.maxMarks;
+                subjectResults[subName].exams++;
+            });
+
+            // Calculate subject percentages
+            Object.values(subjectResults).forEach(stat => {
+                stat.percentage = stat.totalMax > 0 
+                    ? ((stat.totalObtained / stat.totalMax) * 100) 
+                    : 0;
+                stat.grade = calculateGrade(stat.percentage);
+            });
+
+            reportCards.push({
+                student: {
+                    id: student._id,
+                    name: student.name,
+                    rollNum: student.rollNum
+                },
+                marks: {
+                    count: marks.length,
+                    totalObtained,
+                    totalMax,
+                    percentage: percentage.toFixed(2),
+                    grade,
+                    passed,
+                    subjects: Object.values(subjectResults)
+                },
+                attendance: {
+                    totalDays: student.totalDays || 0,
+                    presentDays: student.presentDays || 0,
+                    percentage: student.totalDays > 0 
+                        ? ((student.presentDays / student.totalDays) * 100).toFixed(2) 
+                        : 0
+                },
+                status: marks.length > 0 ? 'generated' : 'no-marks'
+            });
+        }
+
+        // Class statistics
+        const classStats = {
+            totalStudents: students.length,
+            studentsWithMarks: reportCards.filter(r => r.status === 'generated').length,
+            averagePercentage: 0,
+            passRate: 0,
+            gradeDistribution: {}
+        };
+
+        // Calculate class averages
+        const studentsWithMarks = reportCards.filter(r => r.status === 'generated');
+        if (studentsWithMarks.length > 0) {
+            classStats.averagePercentage = (
+                studentsWithMarks.reduce((sum, r) => sum + parseFloat(r.marks.percentage), 0) / 
+                studentsWithMarks.length
+            ).toFixed(2);
+
+            const passedStudents = studentsWithMarks.filter(r => r.marks.passed).length;
+            classStats.passRate = ((passedStudents / studentsWithMarks.length) * 100).toFixed(2);
+
+            // Grade distribution
+            studentsWithMarks.forEach(r => {
+                classStats.gradeDistribution[r.marks.grade] = 
+                    (classStats.gradeDistribution[r.marks.grade] || 0) + 1;
+            });
+        }
+
+        const result = {
+            classInfo: {
+                id: classDetails._id,
+                name: classDetails.sclassName,
+                students: classDetails.students?.length || students.length
+            },
+            school: {
+                name: school?.schoolName || 'School Name'
+            },
+            filters: {
+                year: year || 'All Years',
+                examType: examType || 'All Exams'
+            },
+            generatedAt: new Date(),
+            classStats,
+            reportCards
+        };
+
+        res.send(result);
+    } catch (err) {
+        console.error('Error generating class report cards:', err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Archive results for future reference
+const archiveResults = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { examType, year, description } = req.body;
+
+        // Get student details
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+
+        // Build query for marks
+        let marksQuery = { student: studentId };
+        
+        if (examType) {
+            marksQuery.examType = examType;
+        }
+        
+        if (year) {
+            const startDate = new Date(year, 0, 1);
+            const endDate = new Date(year, 11, 31);
+            marksQuery.examDate = { $gte: startDate, $lte: endDate };
+        }
+
+        // Get all marks
+        const marks = await Marks.find(marksQuery)
+            .populate('subject', 'subName')
+            .sort({ examDate: -1 });
+
+        if (marks.length === 0) {
+            return res.status(400).json({ message: "No marks found to archive" });
+        }
+
+        // Calculate statistics
+        const totalObtained = marks.reduce((sum, m) => sum + m.marksObtained, 0);
+        const totalMax = marks.reduce((sum, m) => sum + m.maxMarks, 0);
+        const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100) : 0;
+        const grade = calculateGrade(percentage);
+
+        // Create archive record
+        const archiveRecord = {
+            student: {
+                id: student._id,
+                name: student.name,
+                rollNum: student.rollNum,
+                class: student.sclassName
+            },
+            academicInfo: {
+                year: year || new Date().getFullYear().toString(),
+                examType: examType || 'All Exams'
+            },
+            marks: marks.map(m => ({
+                subject: m.subject?.subName,
+                examType: m.examType,
+                examDate: m.examDate,
+                marksObtained: m.marksObtained,
+                maxMarks: m.maxMarks,
+                grade: m.grade,
+                percentage: m.maxMarks > 0 
+                    ? ((m.marksObtained / m.maxMarks) * 100).toFixed(2) 
+                    : 0
+            })),
+            summary: {
+                totalExams: marks.length,
+                totalMarks: { obtained: totalObtained, max: totalMax },
+                overallPercentage: percentage.toFixed(2),
+                overallGrade: grade
+            },
+            archivedBy: req.body.adminId || 'system',
+            description: description || `Archived ${examType || 'all'} results for year ${year || 'current'}`,
+            archivedAt: new Date()
+        };
+
+        // Add archive data to student document
+        if (!student.archivedResults) {
+            student.archivedResults = [];
+        }
+        student.archivedResults.push(archiveRecord);
+        await student.save();
+
+        // Also update marks with archive flag
+        await Marks.updateMany(marksQuery, { 
+            $set: { 
+                archivedAt: new Date(),
+                archiveDescription: description || `Archived ${examType || 'all'} results`
+            }
+        });
+
+        res.send({
+            message: "Results archived successfully",
+            archiveRecord: {
+                studentId: student._id,
+                studentName: student.name,
+                archivedAt: archiveRecord.archivedAt,
+                totalExamsArchived: marks.length,
+                overallPercentage: percentage.toFixed(2),
+                overallGrade: grade
+            }
+        });
+    } catch (err) {
+        console.error('Error archiving results:', err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Get archived results for a student
+const getArchivedResults = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        const student = await Student.findById(studentId)
+            .select('name rollNum sclassName archivedResults');
+
+        if (!student) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+
+        if (!student.archivedResults || student.archivedResults.length === 0) {
+            return res.send({ 
+                message: "No archived results found",
+                archives: [] 
+            });
+        }
+
+        res.send({
+            student: {
+                id: student._id,
+                name: student.name,
+                rollNum: student.rollNum,
+                class: student.sclassName
+            },
+            archives: student.archivedResults.map(archive => ({
+                id: archive._id,
+                academicInfo: archive.academicInfo,
+                summary: archive.summary,
+                archivedAt: archive.archivedAt,
+                description: archive.description
+            }))
+        });
+    } catch (err) {
+        console.error('Error fetching archived results:', err);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Restore archived results
+const restoreArchivedResults = async (req, res) => {
+    try {
+        const { studentId, archiveIndex } = req.params;
+
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: "Student not found" });
+        }
+
+        if (!student.archivedResults || student.archivedResults.length === 0) {
+            return res.status(404).json({ message: "No archived results found" });
+        }
+
+        const index = parseInt(archiveIndex);
+        if (index < 0 || index >= student.archivedResults.length) {
+            return res.status(404).json({ message: "Invalid archive index" });
+        }
+
+        const archive = student.archivedResults[index];
+
+        // Remove archive flag from marks
+        await Marks.updateMany(
+            { student: studentId },
+            { $unset: { archivedAt: "", archiveDescription: "" } }
+        );
+
+        // Remove from student's archived results
+        student.archivedResults.splice(index, 1);
+        await student.save();
+
+        res.send({
+            message: "Results restored successfully",
+            restoredArchive: {
+                studentName: student.name,
+                academicInfo: archive.academicInfo,
+                restoredAt: new Date()
+            }
+        });
+    } catch (err) {
+        console.error('Error restoring archived results:', err);
+        res.status(500).json({ message: err.message });
+    }
+};
 
 // Get all classes that a teacher teaches
 const getTeacherClasses = async (req, res) => {
@@ -27,7 +551,6 @@ const getTeacherClasses = async (req, res) => {
         const classMap = new Map();
         
         // 1. Get all classes from subjects taught by this teacher
-        // Find all subjects in the school's classes that are taught by this teacher
         const subjects = await Subject.find({ 
             teacher: teacherId,
             school: schoolId
@@ -67,7 +590,6 @@ const getTeacherClasses = async (req, res) => {
         }
         
         // 3. If no classes found yet, get all classes in the school
-        // This handles cases where subjects might not have teacher assigned yet
         if (classMap.size === 0) {
             console.log('No classes from subjects/main class, fetching all school classes');
             const allClasses = await Sclass.find({ school: schoolId }).select('sclassName');
@@ -112,7 +634,6 @@ const getTeacherSubjectsByClass = async (req, res) => {
         });
         
         if (subjects.length === 0) {
-            // If no subjects assigned, check if teacher is directly assigned to this class
             const teacher = await Teacher.findOne({ 
                 _id: teacherId, 
                 teachSclass: classId 
@@ -193,10 +714,9 @@ const bulkCreateMarks = async (req, res) => {
             
             if (!studentID || !teacherID || !schoolID || !sclassID || !subjectID || 
                 !examType || !examDate || marksObtained === undefined || !maxMarks) {
-                continue; // Skip invalid entries
+                continue;
             }
             
-            // Check if marks already exist for this student, subject, exam type and date
             const existingMarks = await Marks.findOne({
                 student: studentID,
                 subject: subjectID,
@@ -206,14 +726,12 @@ const bulkCreateMarks = async (req, res) => {
             
             let result;
             if (existingMarks) {
-                // Update existing marks
                 existingMarks.marksObtained = marksObtained;
                 existingMarks.maxMarks = maxMarks;
                 existingMarks.comments = comments;
                 await existingMarks.save();
                 result = existingMarks;
             } else {
-                // Create new marks
                 const newMarks = new Marks({
                     student: studentID,
                     teacher: teacherID,
@@ -253,7 +771,6 @@ const createMarks = async (req, res) => {
             return res.status(400).json({ message: "Missing required fields" });
         }
 
-        // Check if marks already exist for this student, subject, exam type and date
         const existingMarks = await Marks.findOne({
             student: studentID,
             subject: subjectID,
@@ -262,7 +779,6 @@ const createMarks = async (req, res) => {
         });
 
         if (existingMarks) {
-            // Update existing marks
             existingMarks.marksObtained = marksObtained;
             existingMarks.maxMarks = maxMarks;
             existingMarks.comments = comments;
@@ -319,7 +835,6 @@ const getStudentMarks = async (req, res) => {
         
         let query = { student: studentId };
         
-        // Filter by exam type if provided
         if (examType && examType !== 'all') {
             query.examType = examType;
         }
@@ -392,6 +907,13 @@ module.exports = {
     getTeacherClasses,
     getTeacherSubjectsByClass,
     getAllMarksForSchool,
-    bulkCreateMarks
+    bulkCreateMarks,
+    generateStudentReportCard,
+    generateClassReportCards,
+    archiveResults,
+    getArchivedResults,
+    restoreArchivedResults,
+    calculateGrade,
+    getGradeColor
 };
 

@@ -22,6 +22,7 @@ import GroupIcon from '@mui/icons-material/Group';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import BadgeIcon from '@mui/icons-material/Badge';
+import DescriptionIcon from '@mui/icons-material/Description';
 
 const SideBar = () => {
     const location = useLocation();
@@ -113,6 +114,12 @@ const SideBar = () => {
                         <AssessmentIcon color={location.pathname.startsWith("/Admin/results") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Results" />
+                </ListItemButton>
+                <ListItemButton component={Link} to="/Admin/report-cards">
+                    <ListItemIcon>
+                        <DescriptionIcon color={location.pathname.startsWith("/Admin/report-cards") ? 'primary' : 'inherit'} />
+                    </ListItemIcon>
+                    <ListItemText primary="Report Cards" />
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Admin/attendance">
                     <ListItemIcon>
