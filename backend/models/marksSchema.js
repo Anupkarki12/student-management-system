@@ -72,5 +72,14 @@ marksSchema.pre('save', function(next) {
     next();
 });
 
+// OPTIMIZATION: Add indexes for faster queries
+// Compound indexes for common query patterns
+marksSchema.index({ student: 1, examType: 1, examDate: -1 }); // For student report cards
+marksSchema.index({ sclass: 1, subject: 1 }); // For class-wise queries
+marksSchema.index({ school: 1, sclass: 1 }); // For school admin queries
+marksSchema.index({ teacher: 1, createdAt: -1 }); // For teacher marks
+marksSchema.index({ archivedAt: 1 }); // For archive queries
+marksSchema.index({ examType: 1, examDate: -1 }); // For exam type filtering
+
 module.exports = mongoose.model("marks", marksSchema);
 
