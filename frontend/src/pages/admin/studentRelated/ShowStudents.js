@@ -27,19 +27,35 @@ import {
     Paper, Box, IconButton, Grid, Card, CardContent, CardActions,
     Typography, Chip, Breadcrumbs, Link, CircularProgress, Avatar, Snackbar, Alert
 } from '@mui/material';
+import styled, { keyframes } from 'styled-components';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PersonIcon from '@mui/icons-material/Person';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import LinkIcon from '@mui/icons-material/Link';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import BadgeIcon from '@mui/icons-material/Badge';
+import GroupIcon from '@mui/icons-material/Group';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { exportToExcel, getCurrentDateString } from '../../../utils/excelExport';
 import axios from 'axios';
+
+// Animation keyframes
+const fadeIn = keyframes`
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+`;
+
+const cardFloat = keyframes`
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
+    100% { transform: translateY(0px); }
+`;
 
 const ShowStudents = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
-const { loading, error, response, sclassesList, sclassStudents } = useSelector((state) => state.sclass);
+    const { loading, error, response, sclassesList, sclassStudents } = useSelector((state) => state.sclass);
     const { currentUser } = useSelector(state => state.user);
     const { status } = useSelector((state) => state.user);
 
@@ -47,7 +63,6 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
     const studentsList = sclassStudents;
 
     console.log("StudentList:", studentsList)
-
     console.log('Redux state sclassStudents:', sclassStudents);
     console.log('Using studentsList:', studentsList);
 
@@ -362,196 +377,403 @@ const { loading, error, response, sclassesList, sclassStudents } = useSelector((
 
     // Render classes as cards
     const renderClassesView = () => (
-        <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" component="h1">
-                    Select a Class to View Students
-                </Typography>
-                <GreenButton variant="contained" onClick={() => navigate("/Admin/addstudents")}>
+        <ViewContainer>
+            <HeaderSection>
+                <HeaderLeft>
+                    <HeaderTitle>👨‍🎓 Select a Class to View Students</HeaderTitle>
+                    <HeaderSubtitle>Choose a class to manage its students</HeaderSubtitle>
+                </HeaderLeft>
+                <AddButton variant="contained" onClick={() => navigate("/Admin/addstudents")}>
+                    <AddCircleIcon sx={{ mr: 1 }} />
                     Add Students
-                </GreenButton>
-            </Box>
+                </AddButton>
+            </HeaderSection>
 
             {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+                <LoadingContainer>
                     <CircularProgress />
-                </Box>
+                    <LoadingText>Loading classes...</LoadingText>
+                </LoadingContainer>
             ) : response ? (
-                <Paper sx={{ p: 4, textAlign: 'center' }}>
-                    <Typography variant="h6" color="textSecondary">
-                        No classes found
-                    </Typography>
+                <EmptyStateContainer>
+                    <EmptyStateIcon>📋</EmptyStateIcon>
+                    <EmptyStateTitle>No Classes Found</EmptyStateTitle>
+                    <EmptyStateText>Get started by adding your first class</EmptyStateText>
                     <GreenButton variant="contained" sx={{ mt: 2 }} onClick={() => navigate("/Admin/addclass")}>
                         Add Class
                     </GreenButton>
-                </Paper>
+                </EmptyStateContainer>
             ) : (
                 <Grid container spacing={3}>
                     {Array.isArray(sclassesList) && sclassesList.map((cls) => (
                         <Grid item xs={12} sm={6} md={4} lg={3} key={cls._id}>
-                            <Card
-                                sx={{
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s ease',
-                                    '&:hover': {
-                                        transform: 'translateY(-5px)',
-                                        boxShadow: 6
-                                    }
-                                }}
-                                onClick={() => handleClassClick(cls)}
-                            >
-                                <CardContent>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                        <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                                            <PersonIcon />
-                                        </Avatar>
-                                        <Typography variant="h5" component="div">
-                                            Class {cls.sclassName}
-                                        </Typography>
-                                    </Box>
-                                    <Chip
-                                        icon={<PersonIcon />}
-                                        label="View Students"
-                                        color="primary"
-                                        variant="outlined"
-                                    />
-                                </CardContent>
-                                <CardActions>
-                                    <Button size="small" fullWidth onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/Admin/class/addstudents/${cls._id}`);
-                                    }}>
-                                        Add Students
-                                    </Button>
-                                </CardActions>
-                            </Card>
+                            <ClassCard onClick={() => handleClassClick(cls)}>
+                                <CardIconWrapper>
+                                    <GroupIcon sx={{ fontSize: 40 }} />
+                                </CardIconWrapper>
+                                <CardTitle>Class {cls.sclassName}</CardTitle>
+                                <CardSubtitle>View all students</CardSubtitle>
+                                <ViewChip label="View Students" icon={<ArrowForwardIcon />} />
+                                <ArrowHint>→</ArrowHint>
+                            </ClassCard>
                         </Grid>
                     ))}
                 </Grid>
             )}
-        </Box>
+        </ViewContainer>
     );
 
     // Render students for selected class
     const renderStudentsView = () => (
-        <Box>
-            <Breadcrumbs sx={{ mb: 2 }}>
-                <Link
+        <ViewContainer>
+            <BreadcrumbsStyled>
+                <BreadcrumbLink
                     color="inherit"
                     href="#"
                     onClick={(e) => { e.preventDefault(); handleBack(); }}
                     sx={{ display: 'flex', alignItems: 'center' }}
                 >
                     <ArrowBackIcon sx={{ mr: 0.5 }} /> Classes
-                </Link>
-                <Typography color="text.primary">Students</Typography>
-            </Breadcrumbs>
+                </BreadcrumbLink>
+                <BreadcrumbCurrent>Students</BreadcrumbCurrent>
+            </BreadcrumbsStyled>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" component="h1">
-                    Students - Class {selectedClass?.sclassName}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                    <GreenButton 
-                        variant="contained" 
+            <HeaderSection>
+                <HeaderLeft>
+                    <HeaderTitle>👨‍🎓 Students - Class {selectedClass?.sclassName}</HeaderTitle>
+                    <HeaderSubtitle>Manage students for this class</HeaderSubtitle>
+                </HeaderLeft>
+                <ButtonGroup>
+                    <ExportButton 
+                        variant="outlined"
                         startIcon={<FileDownloadIcon />}
                         onClick={handleExportStudents}
                         disabled={!studentsList || studentsList.length === 0}
                     >
                         Export Excel
-                    </GreenButton>
-                    <GreenButton variant="contained" onClick={() => navigate(`/Admin/class/addstudents/${selectedClass._id}`)}>
+                    </ExportButton>
+                    <AddButton variant="contained" onClick={() => navigate(`/Admin/class/addstudents/${selectedClass._id}`)}>
+                        <AddCircleIcon sx={{ mr: 1 }} />
                         Add Student
-                    </GreenButton>
-                </Box>
-            </Box>
+                    </AddButton>
+                </ButtonGroup>
+            </HeaderSection>
 
             {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+                <LoadingContainer>
                     <CircularProgress />
-                </Box>
+                    <LoadingText>Loading students...</LoadingText>
+                </LoadingContainer>
             ) : response ? (
-                <Paper sx={{ p: 4, textAlign: 'center' }}>
-                    <Typography variant="h6" color="textSecondary">
-                        No students found in this class
-                    </Typography>
+                <EmptyStateContainer>
+                    <EmptyStateIcon>👨‍🎓</EmptyStateIcon>
+                    <EmptyStateTitle>No Students Found</EmptyStateTitle>
+                    <EmptyStateText>Add students to this class to get started</EmptyStateText>
                     <GreenButton variant="contained" sx={{ mt: 2 }} onClick={() => navigate(`/Admin/class/addstudents/${selectedClass._id}`)}>
                         Add Student
                     </GreenButton>
-                </Paper>
+                </EmptyStateContainer>
             ) : (
-                <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+                <TablePaper>
                     {Array.isArray(studentsList) && studentsList.length > 0 && (
                         <TableTemplate buttonHaver={StudentButtonHaver} columns={studentColumns} rows={studentRows} />
                     )}
                     <SpeedDialTemplate actions={actions} />
-                </Paper>
+                </TablePaper>
             )}
-        </Box>
+        </ViewContainer>
     );
 
     return (
-        <Box sx={{ p: 3 }}>
-            {viewMode === 'classes' && renderClassesView()}
-            {viewMode === 'students' && renderStudentsView()}
-            <Popup setShowPopup={setShowPopup} showPopup={showPopup} />
+        <PageContainer>
+            <MainContainer maxWidth="xl">
+                {viewMode === 'classes' && renderClassesView()}
+                {viewMode === 'students' && renderStudentsView()}
+                <Popup setShowPopup={setShowPopup} showPopup={showPopup} />
 
-            {/* Parent Chooser Dialog for Linking */}
-            <Dialog open={linkParentOpen} onClose={() => setLinkParentOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
-                    Link Parent to Student
-                </DialogTitle>
-                <DialogContent sx={{ mt: 2 }}>
-                    {selectedStudentForLink && (
-                        <Alert severity="info" sx={{ mb: 2 }}>
-                            Linking parent for student: <strong>{selectedStudentForLink.name}</strong> (Roll No: {selectedStudentForLink.rollNum})
-                        </Alert>
-                    )}
-                    <ParentChooser
-                        open={linkParentOpen}
-                        onClose={() => setLinkParentOpen(false)}
-                        onSelect={handleParentSelect}
-                        onCreateNew={() => {
-                            navigate("/Admin/addparent");
-                            setLinkParentOpen(false);
-                        }}
-                        schoolId={currentUser._id}
-                        title="Select Parent / Guardian"
-                        buttonText="Select Parent"
-                        selectedParent={selectedParent}
-                        showCreateNew={true}
-                    />
-                </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
-                    <Button onClick={() => setLinkParentOpen(false)} color="inherit">
-                        Cancel
-                    </Button>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleLinkStudentToParent}
-                        disabled={!selectedParent || linkingInProgress}
-                        startIcon={linkingInProgress ? <CircularProgress size={20} color="inherit" /> : <LinkIcon />}
-                    >
-                        {linkingInProgress ? 'Linking...' : 'Link Parent'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                {/* Parent Chooser Dialog for Linking */}
+                <Dialog open={linkParentOpen} onClose={() => setLinkParentOpen(false)} maxWidth="sm" fullWidth>
+                    <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
+                        Link Parent to Student
+                    </DialogTitle>
+                    <DialogContent sx={{ mt: 2 }}>
+                        {selectedStudentForLink && (
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                                Linking parent for student: <strong>{selectedStudentForLink.name}</strong> (Roll No: {selectedStudentForLink.rollNum})
+                            </Alert>
+                        )}
+                        <ParentChooser
+                            open={linkParentOpen}
+                            onClose={() => setLinkParentOpen(false)}
+                            onSelect={handleParentSelect}
+                            onCreateNew={() => {
+                                navigate("/Admin/addparent");
+                                setLinkParentOpen(false);
+                            }}
+                            schoolId={currentUser._id}
+                            title="Select Parent / Guardian"
+                            buttonText="Select Parent"
+                            selectedParent={selectedParent}
+                            showCreateNew={true}
+                        />
+                    </DialogContent>
+                    <DialogActions sx={{ p: 2 }}>
+                        <Button onClick={() => setLinkParentOpen(false)} color="inherit">
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleLinkStudentToParent}
+                            disabled={!selectedParent || linkingInProgress}
+                            startIcon={linkingInProgress ? <CircularProgress size={20} color="inherit" /> : <LinkIcon />}
+                        >
+                            {linkingInProgress ? 'Linking...' : 'Link Parent'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
 
-            {/* Snackbar for notifications */}
-            <Snackbar
-                open={snackbar.open}
-                autoHideDuration={4000}
-                onClose={handleCloseSnackbar}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            >
-                <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
-        </Box>
+                {/* Snackbar for notifications */}
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={4000}
+                    onClose={handleCloseSnackbar}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                >
+                    <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+                        {snackbar.message}
+                    </Alert>
+                </Snackbar>
+            </MainContainer>
+        </PageContainer>
     );
 };
+
+// Styled Components - DEPENDENT COMPONENTS FIRST
+// Components that are referenced by other components' hover styles MUST be defined before those components
+const CardIconWrapper = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    background: #f0f4ff;
+    color: #667eea;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+    
+    & svg {
+        font-size: 36px;
+    }
+`;
+
+const ArrowHint = styled.span`
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%) translateX(-10px);
+    opacity: 0;
+    font-size: 1.5rem;
+    color: #667eea;
+    transition: all 0.3s ease;
+`;
+
+const PageContainer = styled.div`
+    min-height: 100vh;
+    background: #f0f2f5;
+    padding: 24px;
+`;
+
+const MainContainer = styled.div`
+    animation: ${fadeIn} 0.4s ease-out;
+`;
+
+const ViewContainer = styled.div`
+    animation: ${fadeIn} 0.4s ease-out;
+`;
+
+const HeaderSection = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+    
+    @media (max-width: 600px) {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+`;
+
+const HeaderLeft = styled.div`
+    display: flex;
+    flex-direction: column;
+`;
+
+const HeaderTitle = styled.h1`
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 4px 0;
+`;
+
+const HeaderSubtitle = styled.p`
+    font-size: 0.9rem;
+    color: #888;
+    margin: 0;
+`;
+
+const AddButton = styled(Button)`
+    border-radius: 12px !important;
+    padding: 10px 20px !important;
+    font-weight: 600 !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
+    
+    &:hover {
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+        transform: translateY(-2px);
+    }
+`;
+
+const ExportButton = styled(Button)`
+    border-radius: 12px !important;
+    padding: 10px 20px !important;
+    font-weight: 600 !important;
+    border-color: #667eea !important;
+    color: #667eea !important;
+    
+    &:hover {
+        background: #f0f4ff !important;
+        border-color: #667eea !important;
+    }
+`;
+
+const LoadingContainer = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    color: #667eea;
+`;
+
+const LoadingText = styled.p`
+    margin-top: 16px;
+    font-size: 1rem;
+    color: #888;
+`;
+
+const EmptyStateContainer = styled.div`
+    text-align: center;
+    padding: 60px 20px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+`;
+
+const EmptyStateIcon = styled.div`
+    font-size: 4rem;
+    margin-bottom: 16px;
+`;
+
+const EmptyStateTitle = styled.h3`
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 8px 0;
+`;
+
+const EmptyStateText = styled.p`
+    font-size: 0.95rem;
+    color: #888;
+    margin: 0;
+`;
+
+const ClassCard = styled(Card)`
+    cursor: pointer;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    padding: 24px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    
+    &:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+        
+        ${CardIconWrapper} {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            animation: ${cardFloat} 2s ease-in-out infinite;
+        }
+        
+        ${ArrowHint} {
+            opacity: 1;
+            transform: translateY(-50%) translateX(0);
+        }
+    }
+`;
+
+const CardTitle = styled(Typography)`
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin-bottom: 8px;
+`;
+
+const CardSubtitle = styled(Typography)`
+    font-size: 0.85rem;
+    color: #888;
+`;
+
+const ViewChip = styled(Chip)`
+    margin-top: 16px !important;
+    border-radius: 20px !important;
+    background: #f0f4ff !important;
+    color: #667eea !important;
+    font-weight: 500 !important;
+    
+    .MuiChip-icon {
+        color: #667eea;
+    }
+`;
+
+const BreadcrumbsStyled = styled(Breadcrumbs)`
+    margin-bottom: 24px;
+`;
+
+const BreadcrumbLink = styled(Link)`
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: #667eea !important;
+    font-weight: 500;
+    
+    &:hover {
+        text-decoration: underline;
+    }
+`;
+
+const BreadcrumbCurrent = styled(Typography)`
+    color: #1a1a2e !important;
+    font-weight: 500;
+`;
+
+const TablePaper = styled(Paper)`
+    border-radius: 16px !important;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+`;
 
 export default ShowStudents;
 
