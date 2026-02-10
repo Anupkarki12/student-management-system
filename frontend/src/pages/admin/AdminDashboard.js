@@ -247,4 +247,8 @@ const MainContent = styled(Box)`
     overflow-y: auto;
     padding: 24px;
     background: #f0f2f5;
+    
+    @media (max-width: 600px) {
+        padding: 12px;
+    }
 `;

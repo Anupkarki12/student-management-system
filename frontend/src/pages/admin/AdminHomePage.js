@@ -132,7 +132,7 @@ const AdminHomePage = () => {
                 <StatsGrid container spacing={3}>
                     {/* Total Students Card */}
                     <Grid item xs={12} sm={6} md={4} lg={2}>
-                        <StatCard animationDelay="0.1s">
+                        <StatCard $animationDelay="0.1s">
                             <StatIconWrapper $color="#64b5f6">
                                 <PeopleIcon />
                             </StatIconWrapper>
@@ -145,7 +145,7 @@ const AdminHomePage = () => {
 
                     {/* Total Classes Card */}
                     <Grid item xs={12} sm={6} md={4} lg={2}>
-                        <StatCard animationDelay="0.2s">
+                        <StatCard $animationDelay="0.2s">
                             <StatIconWrapper $color="#ffb74d">
                                 <ClassIcon />
                             </StatIconWrapper>
@@ -158,7 +158,7 @@ const AdminHomePage = () => {
 
                     {/* Total Teachers Card */}
                     <Grid item xs={12} sm={6} md={4} lg={2}>
-                        <StatCard animationDelay="0.3s">
+                        <StatCard $animationDelay="0.3s">
                             <StatIconWrapper $color="#81c784">
                                 <SchoolIcon />
                             </StatIconWrapper>
@@ -171,7 +171,7 @@ const AdminHomePage = () => {
 
                     {/* Total Staff Card */}
                     <Grid item xs={12} sm={6} md={4} lg={2}>
-                        <StatCard animationDelay="0.4s">
+                        <StatCard $animationDelay="0.4s">
                             <StatIconWrapper $color="#ba68c8">
                                 <GroupIcon />
                             </StatIconWrapper>
@@ -184,7 +184,7 @@ const AdminHomePage = () => {
 
                     {/* Salary Records Card */}
                     <Grid item xs={12} sm={6} md={4} lg={2}>
-                        <StatCard animationDelay="0.5s">
+                        <StatCard $animationDelay="0.5s">
                             <StatIconWrapper $color="#ff8a65">
                                 <AttachMoneyIcon />
                             </StatIconWrapper>
@@ -197,7 +197,7 @@ const AdminHomePage = () => {
 
                     {/* Notices Card */}
                     <Grid item xs={12} sm={6} md={4} lg={2}>
-                        <StatCard animationDelay="0.6s">
+                        <StatCard $animationDelay="0.6s">
                             <StatIconWrapper $color="#4dd0e1">
                                 <NotificationsIcon />
                             </StatIconWrapper>
@@ -283,6 +283,10 @@ const AdminHomePage = () => {
 const PageContainer = styled.div`
     min-height: 100vh;
     background: #f0f2f5;
+    
+    @media (max-width: 600px) {
+        padding: 8px;
+    }
 `;
 
 const WelcomeSection = styled.div`
@@ -362,7 +366,7 @@ const StatCard = styled(Card)`
     background: #ffffff !important;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
     transition: all 0.3s ease;
-    animation: ${fadeIn} 0.6s ease-out ${({ animationDelay }) => animationDelay || '0s'} both;
+    animation: ${fadeIn} 0.6s ease-out ${({ $animationDelay }) => $animationDelay || '0s'} both;
     height: 160px;
     display: flex;
     flex-direction: column;

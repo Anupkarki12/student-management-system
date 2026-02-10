@@ -9,7 +9,7 @@ import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined
 import AnnouncementOutlinedIcon from '@mui/icons-material/AnnouncementOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
-import SupervisorAccountOutlinedIcon from '@mui/icons-material/SupervisorAccountOutlined';
+import SchoolIcon from '@mui/icons-material/School';
 import ReportIcon from '@mui/icons-material/Report';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PaymentIcon from '@mui/icons-material/Payment';
@@ -18,8 +18,8 @@ import GradeIcon from '@mui/icons-material/Grade';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import QuizIcon from '@mui/icons-material/Quiz';
-import GroupIcon from '@mui/icons-material/Group';
-import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
+import WorkIcon from '@mui/icons-material/Work';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import BadgeIcon from '@mui/icons-material/Badge';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -49,7 +49,7 @@ const SideBar = () => {
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Admin/teachers">
                     <ListItemIcon>
-                        <SupervisorAccountOutlinedIcon color={location.pathname.startsWith("/Admin/teachers") ? 'primary' : 'inherit'} />
+                        <SchoolIcon color={location.pathname.startsWith("/Admin/teachers") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Teachers" />
                 </ListItemButton>
@@ -73,13 +73,13 @@ const SideBar = () => {
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Admin/parents">
                     <ListItemIcon>
-                        <GroupIcon color={location.pathname.startsWith("/Admin/parents") ? 'primary' : 'inherit'} />
+                        <FamilyRestroomIcon color={location.pathname.startsWith("/Admin/parents") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Parents" />
                 </ListItemButton>
                 <ListItemButton component={Link} to="/Admin/staff">
                     <ListItemIcon>
-                        <PeopleAltIcon color={location.pathname.startsWith("/Admin/staff") ? 'primary' : 'inherit'} />
+                        <WorkIcon color={location.pathname.startsWith("/Admin/staff") ? 'primary' : 'inherit'} />
                     </ListItemIcon>
                     <ListItemText primary="Staff" />
                 </ListItemButton>
@@ -175,3 +175,4 @@ const SideBar = () => {
 }
 
 export default SideBar;
+
