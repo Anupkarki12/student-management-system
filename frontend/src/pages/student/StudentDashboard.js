@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     CssBaseline,
     Box,
@@ -25,46 +25,80 @@ import StudentHomework from './StudentHomework';
 import StudentExamRoutine from './examRoutineRelated/StudentExamRoutine';
 import StudentNotes from './StudentNotes';
 import StudentResults from './StudentResults';
+import styled, { keyframes, css } from 'styled-components';
+import { useSelector } from 'react-redux';
+
+// Animation keyframes
+const fadeIn = keyframes`
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+`;
+
+const pulse = keyframes`
+    0% { box-shadow: 0 0 0 0 rgba(100, 181, 246, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(100, 181, 246, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(100, 181, 246, 0); }
+`;
 
 const StudentDashboard = () => {
     const [open, setOpen] = useState(true);
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const { currentUser } = useSelector((state) => state.user);
+
     const toggleDrawer = () => {
         setOpen(!open);
+    };
+
+    // Update date every minute
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentDate(new Date()), 60000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const studentName = currentUser?.name || "Student";
+    
+    const formatDate = (date) => {
+        const options = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        };
+        return date.toLocaleDateString('en-US', options);
     };
 
     return (
         <>
             <Box sx={{ display: 'flex' }}>
                 <CssBaseline />
-                <AppBar open={open} position='absolute'>
-                    <Toolbar sx={{ pr: '24px' }}>
-                        <IconButton
-                            edge="start"
-                            color="inherit"
-                            aria-label="open drawer"
-                            onClick={toggleDrawer}
-                            sx={{
-                                marginRight: '36px',
-                                ...(open && { display: 'none' }),
-                            }}
-                        >
-                            <MenuIcon />
-                        </IconButton>
-                        <Typography
-                            component="h1"
-                            variant="h6"
-                            color="inherit"
-                            noWrap
-                            sx={{ flexGrow: 1 }}
-                        >
-                            Student Dashboard
-                        </Typography>
-                        <AccountMenu />
+                <StyledAppBar open={open} position='absolute'>
+                    <Toolbar sx={{ pr: '24px', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <IconButton
+                                edge="start"
+                                color="inherit"
+                                aria-label="open drawer"
+                                onClick={toggleDrawer}
+                                sx={{
+                                    marginRight: '36px',
+                                    ...(open && { display: 'none' }),
+                                }}
+                            >
+                                <MenuIcon />
+                            </IconButton>
+                            <WelcomeText>Welcome back, {studentName}! 👋</WelcomeText>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <DateBadge>
+                                📅 {formatDate(currentDate)}
+                            </DateBadge>
+                            <AccountMenu />
+                        </Box>
                     </Toolbar>
-                </AppBar>
+                </StyledAppBar>
                 <Drawer variant="permanent" open={open} sx={styles.drawerStyled}>
                     <Toolbar sx={styles.toolBarStyled}>
-                        <IconButton onClick={toggleDrawer}>
+                        <IconButton onClick={toggleDrawer} sx={styles.chevronButton}>
                             <ChevronLeftIcon />
                         </IconButton>
                     </Toolbar>
@@ -118,5 +152,47 @@ const styles = {
     drawerStyled: {
         display: "flex"
     },
+    chevronButton: {
+        animation: css`${pulse} 2s infinite`,
+    }
 }
+
+// Styled Components
+const StyledAppBar = styled(AppBar)`
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3) !important;
+`;
+
+const WelcomeText = styled(Typography)`
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+    animation: ${fadeIn} 0.5s ease-out;
+    
+    @media (max-width: 600px) {
+        display: none;
+    }
+`;
+
+const DateBadge = styled(Box)`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    color: white;
+    font-weight: 500;
+    font-size: 0.85rem;
+    backdrop-filter: blur(10px);
+    animation: ${fadeIn} 0.5s ease-out 0.2s both;
+    
+    &:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
+    
+    @media (max-width: 600px) {
+        display: none;
+    }
+`;
 

@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 
 import {
+  Home,
   Person,
   Description,
   Feedback,
@@ -21,7 +22,7 @@ const ParentSideBar = () => {
   const location = useLocation();
 
   const menuItems = [
-    { text: 'Home', icon: <Person />, path: '/Parent/dashboard' },
+    { text: 'Home', icon: <Home />, path: '/Parent/dashboard' },
     { text: 'My Children', icon: <Person />, path: '/Parent/children' },
     { text: 'Attendance', icon: <CalendarToday />, path: '/Parent/attendance' },
     { text: 'Homework', icon: <Assignment />, path: '/Parent/homework' },

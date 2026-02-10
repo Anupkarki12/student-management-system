@@ -6,8 +6,9 @@ import { deleteFee } from '../../../redux/feeRelated/feeHandle';
 import { 
     Box, IconButton, Paper, Table, TableBody, TableCell, TableContainer, 
     TableHead, TableRow, Typography, Chip, Tooltip, Card, CardContent,
-    Grid, Avatar, LinearProgress, FormControl, InputLabel, Select, MenuItem
+    Grid, Avatar, LinearProgress, FormControl, InputLabel, Select, MenuItem, Button
 } from '@mui/material';
+import styled, { keyframes } from 'styled-components';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -16,6 +17,8 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import Popup from '../../../components/Popup';
 import { GreenButton } from '../../../components/buttonStyles';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import AddCircleIcon from '@mui/icons-material/Add';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import { 
     exportToExcel, 
     getCurrentDateString, 
@@ -24,6 +27,17 @@ import {
     getMonthYearOptions,
     formatDate 
 } from '../../../utils/excelExport';
+
+// Animation keyframes
+const fadeIn = keyframes`
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+`;
+
+const shimmer = keyframes`
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+`;
 
 const ShowAllFees = () => {
     const dispatch = useDispatch();
@@ -119,15 +133,6 @@ const ShowAllFees = () => {
         }
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return '-';
-        return new Date(dateString).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
-    };
-
     const getFlattenedFees = () => {
         if (!feesList || !Array.isArray(feesList) || feesList.length === 0) return [];
         
@@ -192,7 +197,7 @@ const ShowAllFees = () => {
         const classes = new Map();
         feesList.forEach((fee) => {
             if (fee.student?.sclassName) {
-        classes.set(fee.student?.sclassName?._id, fee.student?.sclassName);
+                classes.set(fee.student?.sclassName?._id, fee.student?.sclassName);
             }
         });
         return Array.from(classes.values());
@@ -298,256 +303,213 @@ const ShowAllFees = () => {
 
     if (loading) {
         return (
-            <Box sx={{ width: '100%', p: 3 }}>
-                <LinearProgress />
-            </Box>
+            <LoadingContainer>
+                <LoadingSpinner />
+                <LoadingText>Loading fees...</LoadingText>
+            </LoadingContainer>
+        );
+    }
+
+    // Empty state view
+    if (response || !allFees || allFees.length === 0) {
+        return (
+            <PageContainer>
+                <EmptyStateContainer>
+                    <EmptyStateIcon>💰</EmptyStateIcon>
+                    <EmptyStateTitle>No Fee Records Found</EmptyStateTitle>
+                    <EmptyStateText>Add fee records to track payments</EmptyStateText>
+                    <GreenButton variant="contained" sx={{ mt: 2 }} onClick={() => navigate("/Admin/addfee")}>
+                        <AddCircleIcon sx={{ mr: 1 }} />
+                        Add Fee
+                    </GreenButton>
+                </EmptyStateContainer>
+            </PageContainer>
         );
     }
 
     return (
-        <Box sx={{ width: '100%', p: 3, backgroundColor: '#f8fafc', minHeight: '100vh' }}>
-            {/* Header */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Box>
-                    <Typography variant="h5" sx={{ fontWeight: '700', color: '#1e293b' }}>
-                        Fee Management
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                        Track and manage all student fee payments
-                    </Typography>
-                </Box>
-                <GreenButton 
-                    variant="contained" 
-                    onClick={() => navigate("/Admin/addfee")}
-                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                >
-                    + Add New Fee
-                </GreenButton>
-            </Box>
+        <PageContainer>
+            <MainContainer>
+                <HeaderSection>
+                    <HeaderLeft>
+                        <HeaderTitle>💰 Fee Management</HeaderTitle>
+                        <HeaderSubtitle>Track and manage all student fee payments</HeaderSubtitle>
+                    </HeaderLeft>
+                    <AddButton variant="contained" onClick={() => navigate("/Admin/addfee")}>
+                        <AddCircleIcon sx={{ mr: 1 }} />
+                        Add Fee
+                    </AddButton>
+                </HeaderSection>
 
-            {/* Summary Cards */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6} md={3}>
-                    <Card sx={{ 
-                        borderRadius: 3,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                        height: '100%'
-                    }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                                <Avatar sx={{ bgcolor: '#e3f2fd', width: 40, height: 40 }}>
-                                    <PaymentIcon sx={{ color: '#1976d2' }} />
-                                </Avatar>
-                                <Typography variant="body2" color="textSecondary">Total</Typography>
-                            </Box>
-                            <Typography variant="h5" sx={{ fontWeight: '700', color: '#1e293b' }}>
-                                ₹{allSummary.total.toLocaleString()}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={6} md={3}>
-                    <Card sx={{ 
-                        borderRadius: 3,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                        height: '100%'
-                    }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                                <Avatar sx={{ bgcolor: '#e8f5e9', width: 40, height: 40 }}>
-                                    <CheckCircleIcon sx={{ color: '#4caf50' }} />
-                                </Avatar>
-                                <Typography variant="body2" color="textSecondary">Paid</Typography>
-                            </Box>
-                            <Typography variant="h5" sx={{ fontWeight: '700', color: '#4caf50' }}>
-                                ₹{allSummary.paid.toLocaleString()}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={6} md={3}>
-                    <Card sx={{ 
-                        borderRadius: 3,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                        height: '100%'
-                    }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                                <Avatar sx={{ bgcolor: '#fff3e0', width: 40, height: 40 }}>
-                                    <WarningIcon sx={{ color: '#ff9800' }} />
-                                </Avatar>
-                                <Typography variant="body2" color="textSecondary">Due</Typography>
-                            </Box>
-                            <Typography variant="h5" sx={{ fontWeight: '700', color: '#ff9800' }}>
-                                ₹{allSummary.unpaid.toLocaleString()}
-                            </Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-                <Grid item xs={6} md={3}>
-                    <Card sx={{ 
-                        borderRadius: 3,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                        height: '100%'
-                    }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                                <Avatar sx={{ bgcolor: '#fce4ec', width: 40, height: 40 }}>
-                                    <PaymentIcon sx={{ color: '#e91e63' }} />
-                                </Avatar>
-                                <Typography variant="body2" color="textSecondary">Collected</Typography>
-                            </Box>
-                            <Typography variant="h5" sx={{ fontWeight: '700', color: '#1e293b' }}>
-                                {paymentPercentage}%
-                            </Typography>
+                <StatsRow>
+                    <StatChip 
+                        icon={<AttachMoneyIcon />}
+                        label={`Total: ₹${allSummary.total.toLocaleString()}`}
+                    />
+                    <StatChip 
+                        icon={<CheckCircleIcon />}
+                        label={`Paid: ₹${allSummary.paid.toLocaleString()}`}
+                        sx={{ bgcolor: '#e8f5e9 !important', color: '#4caf50 !important' }}
+                    />
+                    <StatChip 
+                        icon={<WarningIcon />}
+                        label={`Due: ₹${allSummary.unpaid.toLocaleString()}`}
+                        sx={{ bgcolor: '#ffebee !important', color: '#f44336 !important' }}
+                    />
+                </StatsRow>
+
+                <FilterCard>
+                    <FilterTitle>Filter Records</FilterTitle>
+                    <FilterRow>
+                        <FormControl size="small" sx={{ minWidth: 200 }}>
+                            <InputLabel>Filter by Class</InputLabel>
+                            <Select
+                                value={selectedClass}
+                                onChange={(e) => setSelectedClass(e.target.value)}
+                                label="Filter by Class"
+                            >
+                                <MenuItem value="">All Classes</MenuItem>
+                                {uniqueClasses.map((cls) => (
+                                    <MenuItem key={cls._id} value={cls._id}>
+                                        {cls.sclassName}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        
+                        {selectedClass && (
+                            <Chip 
+                                label={uniqueClasses.find(c => c._id === selectedClass)?.sclassName || 'Selected Class'}
+                                onDelete={() => setSelectedClass("")}
+                                color="primary"
+                                variant="outlined"
+                            />
+                        )}
+                        
+                        <FormControl size="small" sx={{ minWidth: 180 }}>
+                            <InputLabel>Filter by Month</InputLabel>
+                            <Select
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                label="Filter by Month"
+                            >
+                                <MenuItem value="">All Months</MenuItem>
+                                {uniqueMonths.map((month) => (
+                                    <MenuItem key={month} value={month}>
+                                        {month}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        
+                        {selectedMonth && (
+                            <Chip 
+                                label={selectedMonth}
+                                onDelete={() => setSelectedMonth("")}
+                                color="secondary"
+                                variant="outlined"
+                            />
+                        )}
+                        
+                        <Box sx={{ flexGrow: 1 }} />
+                        
+                        <ExportButton 
+                            variant="outlined"
+                            startIcon={<FileDownloadIcon />}
+                            onClick={handleExportFees}
+                            disabled={allFees.length === 0}
+                        >
+                            Export Excel
+                        </ExportButton>
+                        
+                        <Typography variant="body2" color="textSecondary">
+                            {displayFees.length} record{displayFees.length !== 1 ? 's' : ''} found
+                        </Typography>
+                    </FilterRow>
+                </FilterCard>
+
+                {/* Summary Cards */}
+                <SummaryGrid container spacing={2}>
+                    <Grid item xs={6} md={3}>
+                        <SummaryCard bgcolor="#e3f2fd">
+                            <SummaryIcon bgcolor="#bbdefb">
+                                <PaymentIcon sx={{ color: '#1976d2' }} />
+                            </SummaryIcon>
+                            <SummaryInfo>
+                                <SummaryLabel>Total Amount</SummaryLabel>
+                                <SummaryValue>₹{allSummary.total.toLocaleString()}</SummaryValue>
+                            </SummaryInfo>
+                        </SummaryCard>
+                    </Grid>
+                    <Grid item xs={6} md={3}>
+                        <SummaryCard bgcolor="#e8f5e9">
+                            <SummaryIcon bgcolor="#c8e6c9">
+                                <CheckCircleIcon sx={{ color: '#4caf50' }} />
+                            </SummaryIcon>
+                            <SummaryInfo>
+                                <SummaryLabel>Paid Amount</SummaryLabel>
+                                <SummaryValue color="#4caf50">₹{allSummary.paid.toLocaleString()}</SummaryValue>
+                            </SummaryInfo>
+                        </SummaryCard>
+                    </Grid>
+                    <Grid item xs={6} md={3}>
+                        <SummaryCard bgcolor="#fff3e0">
+                            <SummaryIcon bgcolor="#ffe0b2">
+                                <WarningIcon sx={{ color: '#ff9800' }} />
+                            </SummaryIcon>
+                            <SummaryInfo>
+                                <SummaryLabel>Due Amount</SummaryLabel>
+                                <SummaryValue color="#ff9800">₹{allSummary.unpaid.toLocaleString()}</SummaryValue>
+                            </SummaryInfo>
+                        </SummaryCard>
+                    </Grid>
+                    <Grid item xs={6} md={3}>
+                        <SummaryCard bgcolor="#f3e5f5">
+                            <SummaryIcon bgcolor="#e1bee7">
+                                <PaymentIcon sx={{ color: '#9c27b0' }} />
+                            </SummaryIcon>
+                            <SummaryInfo>
+                                <SummaryLabel>Collection Rate</SummaryLabel>
+                                <SummaryValue color="#9c27b0">{paymentPercentage}%</SummaryValue>
+                            </SummaryInfo>
                             <LinearProgress 
                                 variant="determinate" 
                                 value={parseFloat(paymentPercentage)} 
-                                sx={{ mt: 1, borderRadius: 5, height: 6 }} 
+                                sx={{ mt: 1, borderRadius: 5, height: 6, bgcolor: 'rgba(156, 39, 176, 0.1)' }} 
                             />
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
+                        </SummaryCard>
+                    </Grid>
+                </SummaryGrid>
 
-            {/* Filter Section */}
-            <Card sx={{ borderRadius: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', mb: 3 }}>
-                <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                    <FormControl size="small" sx={{ minWidth: 200 }}>
-                        <InputLabel>Filter by Class</InputLabel>
-                        <Select
-                            value={selectedClass}
-                            onChange={(e) => setSelectedClass(e.target.value)}
-                            label="Filter by Class"
-                        >
-                            <MenuItem value="">All Classes</MenuItem>
-                            {uniqueClasses.map((cls) => (
-                                <MenuItem key={cls._id} value={cls._id}>
-                                    {cls.sclassName}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    
-                    {selectedClass && (
-                        <Chip 
-                            label={uniqueClasses.find(c => c._id === selectedClass)?.sclassName || 'Selected Class'}
-                            onDelete={() => setSelectedClass("")}
-                            color="primary"
-                            variant="outlined"
-                        />
-                    )}
-                    
-                    <FormControl size="small" sx={{ minWidth: 180 }}>
-                        <InputLabel>Filter by Month</InputLabel>
-                        <Select
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            label="Filter by Month"
-                        >
-                            <MenuItem value="">All Months</MenuItem>
-                            {uniqueMonths.map((month) => (
-                                <MenuItem key={month} value={month}>
-                                    {month}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    
-                    {selectedMonth && (
-                        <Chip 
-                            label={selectedMonth}
-                            onDelete={() => setSelectedMonth("")}
-                            color="secondary"
-                            variant="outlined"
-                        />
-                    )}
-                    
-                    <Box sx={{ flexGrow: 1 }} />
-                    
-                    <GreenButton 
-                        variant="contained" 
-                        startIcon={<FileDownloadIcon />}
-                        onClick={handleExportFees}
-                        disabled={allFees.length === 0}
-                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                    >
-                        Export Excel
-                    </GreenButton>
-                    
-                    <Typography variant="body2" color="textSecondary">
-                        {displayFees.length} record{displayFees.length !== 1 ? 's' : ''} found
-                    </Typography>
-                </Box>
-            </Card>
-
-            {/* Fee Table */}
-            <Card sx={{ borderRadius: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-                <Box sx={{ p: 2, borderBottom: '1px solid #f0f0f0' }}>
-                    <Typography variant="h6" sx={{ fontWeight: '600', color: '#1e293b' }}>
-                        Fee Records
-                    </Typography>
-                </Box>
-                
-                {error ? (
-                    <Box sx={{ p: 4, textAlign: 'center' }}>
-                        <Typography color="error">{error}</Typography>
-                    </Box>
-                ) : response ? (
-                    <Box sx={{ p: 4, textAlign: 'center' }}>
-                        <Typography variant="h6" color="textSecondary" gutterBottom>
-                            No fee records found
-                        </Typography>
-                        <GreenButton variant="contained" onClick={() => navigate("/Admin/addfee")}>
-                            Add First Fee
-                        </GreenButton>
-                    </Box>
-                ) : allFees.length === 0 ? (
-                    <Box sx={{ p: 4, textAlign: 'center' }}>
-                        <Typography color="textSecondary">
-                            {selectedClass ? 'No fee records found for this class' : 'No fee records available'}
-                        </Typography>
-                    </Box>
-                ) : (
+                {/* Fee Table */}
+                <TablePaper>
                     <TableContainer>
                         <Table>
-                            <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                            <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: '600', color: '#64748b' }}>Student</TableCell>
-                                    <TableCell sx={{ fontWeight: '600', color: '#64748b' }}>Roll No.</TableCell>
-                                    <TableCell sx={{ fontWeight: '600', color: '#64748b' }}>Class</TableCell>
-                                    <TableCell sx={{ fontWeight: '600', color: '#64748b' }}>Month</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: '600', color: '#64748b' }}>Amount</TableCell>
-                                    <TableCell sx={{ fontWeight: '600', color: '#64748b' }}>Due Date</TableCell>
-                                    <TableCell sx={{ fontWeight: '600', color: '#64748b' }}>Payment Date</TableCell>
-                                    <TableCell sx={{ fontWeight: '600', color: '#64748b' }}>Status</TableCell>
-                                    <TableCell align="center" sx={{ fontWeight: '600', color: '#64748b' }}>Actions</TableCell>
+                                    <StyledTh>Student</StyledTh>
+                                    <StyledTh>Roll No.</StyledTh>
+                                    <StyledTh>Class</StyledTh>
+                                    <StyledTh>Month</StyledTh>
+                                    <StyledTh align="right">Amount</StyledTh>
+                                    <StyledTh>Due Date</StyledTh>
+                                    <StyledTh>Payment Date</StyledTh>
+                                    <StyledTh>Status</StyledTh>
+                                    <StyledTh align="center">Actions</StyledTh>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {allFees.map((fee, index) => (
-                                    <TableRow 
+                                    <StyledTableRow 
                                         key={index}
-                                        sx={{ 
-                                            '&:hover': { backgroundColor: '#f8fafc' },
-                                            transition: 'background-color 0.2s'
-                                        }}
                                     >
                                         <TableCell>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                <Avatar sx={{ 
-                                                    width: 36, 
-                                                    height: 36, 
-                                                    bgcolor: '#1976d2',
-                                                    fontSize: 14,
-                                                    fontWeight: '600'
-                                                }}>
+                                            <StudentCell>
+                                                <StudentAvatar>
                                                     {fee.studentName?.charAt(0)?.toUpperCase()}
-                                                </Avatar>
-                                                <Typography variant="body2" fontWeight="500">
-                                                    {fee.studentName}
-                                                </Typography>
-                                            </Box>
+                                                </StudentAvatar>
+                                                <StudentName>{fee.studentName}</StudentName>
+                                            </StudentCell>
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2" color="textSecondary">
@@ -555,14 +517,7 @@ const ShowAllFees = () => {
                                             </Typography>
                                         </TableCell>
                                         <TableCell>
-                                            <Chip 
-                                                label={fee.className} 
-                                                size="small"
-                                                sx={{ 
-                                                    bgcolor: '#f1f5f9',
-                                                    fontWeight: '500'
-                                                }}
-                                            />
+                                            <ClassChip label={fee.className} />
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2">
@@ -570,9 +525,7 @@ const ShowAllFees = () => {
                                             </Typography>
                                         </TableCell>
                                         <TableCell align="right">
-                                            <Typography variant="body2" fontWeight="600">
-                                                ₹{fee.amount?.toLocaleString()}
-                                            </Typography>
+                                            <AmountText>₹{fee.amount?.toLocaleString()}</AmountText>
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2" color="textSecondary">
@@ -585,55 +538,321 @@ const ShowAllFees = () => {
                                             </Typography>
                                         </TableCell>
                                         <TableCell>
-                                            <Chip 
-                                                label={fee.status} 
-                                                size="small"
+                                            <StatusChip 
+                                                label={fee.status}
                                                 onClick={() => fee && fee._id && handleToggleStatus(fee)}
                                                 clickable
                                                 sx={{ 
-                                                    cursor: 'pointer',
-                                                    fontWeight: '600',
                                                     bgcolor: getStatusBgColor(fee.status),
                                                     color: getStatusColor(fee.status),
-                                                    '&:hover': {
-                                                        bgcolor: getStatusBgColor(fee.status),
-                                                        opacity: 0.9
-                                                    }
                                                 }}
                                             />
                                         </TableCell>
                                         <TableCell align="center">
-                                            <Tooltip title="View Details">
-                                                <IconButton 
+                                            <ActionButtons>
+                                                <IconButton
                                                     onClick={() => fee.studentId && handleViewDetails(fee.studentId)}
-                                                    size="small"
-                                                    sx={{ color: '#1976d2' }}
+                                                    title="View Details"
+                                                    sx={{ color: '#667eea' }}
                                                 >
                                                     <VisibilityIcon fontSize="small" />
                                                 </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Delete">
-                                                <IconButton 
+                                                <IconButton
                                                     onClick={() => fee.studentId && fee._id && handleDelete(fee.studentId, fee._id)}
-                                                    size="small"
-                                                    sx={{ color: '#f44336' }}
+                                                    title="Delete Fee"
+                                                    sx={{ color: '#f5576c' }}
                                                 >
                                                     <DeleteIcon fontSize="small" />
                                                 </IconButton>
-                                            </Tooltip>
+                                            </ActionButtons>
                                         </TableCell>
-                                    </TableRow>
+                                    </StyledTableRow>
                                 ))}
                             </TableBody>
                         </Table>
                     </TableContainer>
-                )}
-            </Card>
-            
+                </TablePaper>
+            </MainContainer>
             <Popup message={message} setShowPopup={setShowPopup} showPopup={showPopup} />
-        </Box>
+        </PageContainer>
     );
 };
+
+// Styled Components
+const PageContainer = styled.div`
+    min-height: 100vh;
+    background: #f0f2f5;
+    padding: 24px;
+`;
+
+const MainContainer = styled.div`
+    animation: ${fadeIn} 0.4s ease-out;
+`;
+
+const HeaderSection = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+    
+    @media (max-width: 600px) {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+`;
+
+const HeaderLeft = styled.div`
+    display: flex;
+    flex-direction: column;
+`;
+
+const HeaderTitle = styled.h1`
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 4px 0;
+`;
+
+const HeaderSubtitle = styled.p`
+    font-size: 0.9rem;
+    color: #888;
+    margin: 0;
+`;
+
+const AddButton = styled(Button)`
+    border-radius: 12px !important;
+    padding: 10px 20px !important;
+    font-weight: 600 !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
+    
+    &:hover {
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+        transform: translateY(-2px);
+    }
+`;
+
+const LoadingContainer = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    color: #667eea;
+`;
+
+const LoadingSpinner = styled.div`
+    width: 48px;
+    height: 48px;
+    border: 4px solid #f0f0f0;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+`;
+
+const LoadingText = styled.p`
+    margin-top: 16px;
+    font-size: 1rem;
+    color: #888;
+`;
+
+const EmptyStateContainer = styled.div`
+    text-align: center;
+    padding: 80px 20px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    max-width: 400px;
+    margin: 100px auto;
+`;
+
+const EmptyStateIcon = styled.div`
+    font-size: 5rem;
+    margin-bottom: 16px;
+`;
+
+const EmptyStateTitle = styled.h3`
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 8px 0;
+`;
+
+const EmptyStateText = styled.p`
+    font-size: 0.95rem;
+    color: #888;
+    margin: 0 0 16px 0;
+`;
+
+const StatsRow = styled.div`
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+`;
+
+const StatChip = styled(Chip)`
+    font-weight: 600 !important;
+    background: #f0f4ff !important;
+    color: #667eea !important;
+    
+    .MuiChip-icon {
+        color: #667eea;
+    }
+`;
+
+const FilterCard = styled(Card)`
+    border-radius: 16px !important;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    margin-bottom: 24px;
+`;
+
+const FilterTitle = styled(Typography)`
+    font-weight: 600 !important;
+    color: #1a1a2e;
+    padding: 16px 20px 8px;
+`;
+
+const FilterRow = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px 16px;
+    flex-wrap: wrap;
+`;
+
+const ExportButton = styled(Button)`
+    border-radius: 12px !important;
+    padding: 8px 16px !important;
+    font-weight: 600 !important;
+    border-color: #667eea !important;
+    color: #667eea !important;
+    
+    &:hover {
+        background: #f0f4ff !important;
+        border-color: #667eea !important;
+    }
+`;
+
+const SummaryGrid = styled(Grid)`
+    margin-bottom: 24px;
+`;
+
+const SummaryCard = styled(Card)`
+    border-radius: 16px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    height: 100%;
+    background: ${props => props.bgcolor} !important;
+`;
+
+const SummaryIcon = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: ${props => props.bgcolor};
+    margin-bottom: 12px;
+    
+    & svg {
+        font-size: 24px;
+    }
+`;
+
+const SummaryInfo = styled.div`
+    flex: 1;
+`;
+
+const SummaryLabel = styled.p`
+    font-size: 0.85rem;
+    color: #888;
+    margin: 0 0 4px 0;
+`;
+
+const SummaryValue = styled.p`
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: ${props => props.color || '#1a1a2e'};
+    margin: 0;
+`;
+
+const TablePaper = styled(Paper)`
+    border-radius: 16px !important;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+`;
+
+const StyledTh = styled(TableCell)`
+    font-weight: 600 !important;
+    color: #64748b !important;
+    background: #f8fafc !important;
+    padding: 16px !important;
+`;
+
+const StyledTableRow = styled(TableRow)`
+    &:hover {
+        background-color: #f8fafc !important;
+    }
+    transition: background-color 0.2s;
+`;
+
+const StudentCell = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 12px;
+`;
+
+const StudentAvatar = styled.div`
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+`;
+
+const StudentName = styled(Typography)`
+    font-weight: 500 !important;
+    color: #1a1a2e;
+`;
+
+const ClassChip = styled(Chip)`
+    background: #f1f5f9 !important;
+    font-weight: 500 !important;
+`;
+
+const AmountText = styled.span`
+    font-weight: 600;
+    color: #1a1a2e;
+`;
+
+const StatusChip = styled(Chip)`
+    font-weight: 600 !important;
+    cursor: pointer;
+    
+    &:hover {
+        opacity: 0.9;
+    }
+`;
+
+const ActionButtons = styled.div`
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+`;
 
 export default ShowAllFees;
 
