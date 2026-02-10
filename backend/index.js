@@ -244,6 +244,15 @@ app.use((err, req, res, next) => {
 app.use(express.static(path.join(__dirname, "../frontend/build")));
 
 // Catch-all handler for SPA - must be LAST
+// IMPORTANT: Handle WebSocket requests before this
+app.use((req, res, next) => {
+    const upgradeHeader = req.headers.upgrade || req.headers.Upgrade;
+    if (req.url.includes('/ws') || (upgradeHeader && upgradeHeader.toLowerCase().includes('websocket'))) {
+        return res.status(501).json({ message: 'WebSocket not supported' });
+    }
+    next();
+});
+
 app.get("*", (req, res) => {
   res.sendFile(
     path.join(__dirname, "../frontend/build/index.html")
