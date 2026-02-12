@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Divider, ListItemButton, ListItemIcon, ListItemText, ListSubheader } from '@mui/material';
+import { Divider, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Collapse, Box, Typography } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 
 import HomeIcon from "@mui/icons-material/Home";
@@ -23,9 +23,25 @@ import WorkIcon from '@mui/icons-material/Work';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import BadgeIcon from '@mui/icons-material/Badge';
 import DescriptionIcon from '@mui/icons-material/Description';
+import EventIcon from '@mui/icons-material/Event';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import PersonIcon from '@mui/icons-material/Person';
+import GroupsIcon from '@mui/icons-material/Groups';
 
 const SideBar = () => {
     const location = useLocation();
+    const [attendanceExpanded, setAttendanceExpanded] = React.useState(true);
+
+    const handleAttendanceToggle = () => {
+        setAttendanceExpanded(!attendanceExpanded);
+    };
+
+    const isAttendanceActive = 
+        location.pathname.startsWith("/Admin/attendance") ||
+        location.pathname.startsWith("/Admin/teacher-attendance") ||
+        location.pathname.startsWith("/Admin/staff-attendance");
+
     return (
         <>
             <React.Fragment>
@@ -121,24 +137,44 @@ const SideBar = () => {
                     </ListItemIcon>
                     <ListItemText primary="Report Cards" />
                 </ListItemButton>
-                <ListItemButton component={Link} to="/Admin/attendance">
+
+                {/* Attendance Dropdown */}
+                <ListItemButton onClick={handleAttendanceToggle} sx={{ 
+                    backgroundColor: isAttendanceActive ? 'rgba(127, 86, 218, 0.15)' : 'transparent',
+                    '&:hover': {
+                        backgroundColor: 'rgba(127, 86, 218, 0.2)',
+                    }
+                }}>
                     <ListItemIcon>
-                        <CheckCircleIcon color={location.pathname.startsWith("/Admin/attendance") && !location.pathname.startsWith("/Admin/teacher-attendance") ? 'primary' : 'inherit'} />
+                        <EventIcon color={isAttendanceActive ? 'primary' : 'inherit'} />
                     </ListItemIcon>
-                    <ListItemText primary="Student Attendance" />
+                    <ListItemText primary="Attendance" />
+                    {attendanceExpanded ? <ExpandLess color="primary" /> : <ExpandMore />}
                 </ListItemButton>
-                <ListItemButton component={Link} to="/Admin/teacher-attendance">
-                    <ListItemIcon>
-                        <CheckCircleIcon color={location.pathname.startsWith("/Admin/teacher-attendance") ? 'primary' : 'inherit'} />
-                    </ListItemIcon>
-                    <ListItemText primary="Teacher Attendance" />
-                </ListItemButton>
-                <ListItemButton component={Link} to="/Admin/staff-attendance">
-                    <ListItemIcon>
-                        <CheckCircleIcon color={location.pathname.startsWith("/Admin/staff-attendance") ? 'primary' : 'inherit'} />
-                    </ListItemIcon>
-                    <ListItemText primary="Staff Attendance" />
-                </ListItemButton>
+                
+                <Collapse in={attendanceExpanded} timeout="auto" unmountOnExit>
+                    <Box component="nav" sx={{ pl: 2 }}>
+                        <ListItemButton component={Link} to="/Admin/attendance" sx={{ pl: 2 }}>
+                            <ListItemIcon>
+                                <PersonIcon color={location.pathname.startsWith("/Admin/attendance") && !location.pathname.startsWith("/Admin/teacher-attendance") && !location.pathname.startsWith("/Admin/staff-attendance") ? 'primary' : 'inherit'} fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText primary="Student Attendance" sx={{ fontSize: '0.85rem' }} />
+                        </ListItemButton>
+                        <ListItemButton component={Link} to="/Admin/teacher-attendance" sx={{ pl: 2 }}>
+                            <ListItemIcon>
+                                <SchoolIcon color={location.pathname.startsWith("/Admin/teacher-attendance") ? 'primary' : 'inherit'} fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText primary="Teacher Attendance" sx={{ fontSize: '0.85rem' }} />
+                        </ListItemButton>
+                        <ListItemButton component={Link} to="/Admin/staff-attendance" sx={{ pl: 2 }}>
+                            <ListItemIcon>
+                                <GroupsIcon color={location.pathname.startsWith("/Admin/staff-attendance") ? 'primary' : 'inherit'} fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText primary="Staff Attendance" sx={{ fontSize: '0.85rem' }} />
+                        </ListItemButton>
+                    </Box>
+                </Collapse>
+
                 <ListItemButton component={Link} to="/Admin/notices">
                     <ListItemIcon>
                         <AnnouncementOutlinedIcon color={location.pathname.startsWith("/Admin/notices") ? 'primary' : 'inherit'} />
